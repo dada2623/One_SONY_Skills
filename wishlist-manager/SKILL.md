@@ -216,20 +216,20 @@ Show the created item details and ask if any fields need adjustment.
 
 ## Scripts
 
-通用脚本位于 `notion-utils` skill，请使用相对路径调用：
+通用脚本位于 `notion-utils` skill，请使用以下方式调用：
 
 ```bash
 # 列出 Wishlist 数据库的所有页面
-DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ../notion-utils/scripts/list-pages.sh
+DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./skills/notion-utils/scripts/list-pages.sh
 
 # 在 Wishlist 数据库创建页面
-DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ../notion-utils/scripts/create-page.sh "工装夹克"
+DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./skills/notion-utils/scripts/create-page.sh "工装夹克"
 
 # 更新页面状态
-../notion-utils/scripts/update-page.sh <page_id> '{"状态":"已买"}'
+./skills/notion-utils/scripts/update-page.sh <page_id> '{"状态":"已买"}'
 ```
 
-**注意**: 相对路径基于 skills 文件夹，所有 skill 应放在同一级目录下。
+**注意**: 路径基于 workspace 目录，skills 文件夹应位于 workspace 下。
 
 ## Node.js Helper Script
 

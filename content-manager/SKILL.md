@@ -265,17 +265,17 @@ PATCH /v1/pages/{page_id}
 
 ## Scripts
 
-通用脚本位于 `notion-utils` skill，请使用相对路径调用：
+通用脚本位于 `notion-utils` skill，请使用以下方式调用：
 
 ```bash
 # 列出阅读记录数据库的所有页面
-DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ../notion-utils/scripts/list-pages.sh
+DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ./skills/notion-utils/scripts/list-pages.sh
 
 # 在阅读记录数据库创建页面
-DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ../notion-utils/scripts/create-page.sh "百年孤独"
+DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ./skills/notion-utils/scripts/create-page.sh "百年孤独"
 
 # 更新页面状态
-../notion-utils/scripts/update-page.sh <page_id> '{"状态":"已读完"}'
+./skills/notion-utils/scripts/update-page.sh <page_id> '{"状态":"已读完"}'
 ```
 
-**注意**: 相对路径基于 skills 文件夹，所有 skill 应放在同一级目录下。
+**注意**: 路径基于 workspace 目录，skills 文件夹应位于 workspace 下。

@@ -14,7 +14,7 @@ metadata:
 
 ## 脚本位置
 
-`./scripts/`
+`./skills/notion-utils/scripts/`
 
 ## 猟用脚本列表
 
@@ -39,12 +39,12 @@ metadata:
 
 ```bash
 # 列出 Wishlist 数据库的所有页面
-DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./scripts/list-pages.sh
+DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./skills/notion-utils/scripts/list-pages.sh
 
 # 在影视记录数据库创建页面
-DATABASE_ID=8ad61aac3afd4101862e50986e36b9bc ./scripts/create-page.sh "test"
+DATABASE_ID=8ad61aac3afd4101862e50986e36b9bc ./skills/notion-utils/scripts/create-page.sh "test"
 
 # 更新页面状态
-./scripts/update-page.sh <page_id> '{"状态":"已买"}'
+./skills/notion-utils/scripts/update-page.sh <page_id> '{"状态":"已买"}'
 ```
 
