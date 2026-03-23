@@ -3,20 +3,36 @@ set -e
 
 NOTION_API_KEY="${NOTION_API_KEY:-$(cat ~/.config/notion/api_key 2>/dev/null || true)}"
 
-if [ -z "$NOTion_API_KEY" ]; then
-  echo "Error: NOTion_api_key not set and ~/.config/notion/api_key not found." >&2
+if [ -z "$NOTION_API_KEY" ]; then
+  echo "Error: NOTION_API_KEY not set and ~/.config/notion/api_key not found." >&2
   exit 1
 fi
 
-SCRIPT_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+# Helper functions
 
-DATABASE_id="${DATABASE_id:-$1}"
-if [ -z "$DATABASE_id" ]; then
-  echo "Error: DATABASE_id not set (set DATABASE_id=<database_id>)" >&2
-fi
+notion_api() {
+  local method="$1"
+  local endpoint="$2"
+  local payload="$3"
+  curl -s -X "$method" "https://api.notion.com/v1/$endpoint" \
+    -H "Authorization: Bearer $NOTION_API_KEY" \
+    -H "Notion-Version: 2025-09-03" \
+    -H "Content-Type: application/json" \
+    ${payload:+-d "$payload"}
+}
 
-title_prop=$(get_title_property "$DATA_source_id")
-if [ -z "$title_prop" ]; then
-  echo "Error: could not resolve title property for data源查询" >&2
-fi
+get_data_source_id() {
+  local database_id="$1"
+  # Search for the database to get its data_source_id
+  local response
+  response=$(notion_api POST "search" "{\"query\": \"\", \"filter\": {\"value\": \"database\", \"property\": \"object\"}}")
+  # Find the database with matching database_id in the results
+  echo "$response" | jq -r --arg db_id "$database_id" '.results[] | select(.id == $db_id or (.parent.database_id // "" == $db_id)) | .id' | head -n1
+}
+
+get_title_property() {
+  local data_source_id="$1"
+  local response
+  response=$(notion_api GET "data_sources/$data_source_id")
+  echo "$response" | jq -r '.properties | to_entries[] | select(.value.type == "title") | .key' | head -n1
+}
