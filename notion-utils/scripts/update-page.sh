@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+source "$script_dir/common.sh"
 
 PAGE_ID="${1:-}"
 UPDATES_JSON="${2:-}"
@@ -11,18 +11,15 @@ if [ -z "$PAGE_ID" ] || [ -z "$UPDATES_JSON" ]; then
   echo "Example: $0 <page_id> '{\"状态\":\"已买\",\"优先级\":\"P1\"}'" >&2
   exit 1
 fi
-
-# Fetch page to learn property types
-PAGE_RESP=$(notion_api GET "pages/$PAGE_ID")
-if echo "$PAGE_RESP" | jq -e '.error' > /dev/null; then
-  echo "$PAGE_RESP" | jq '.error' >&2
+echo "Fetching page to learn property types..."
+page_resp=$(notion_api GET "pages/$PAGE_ID")
+if echo "$page_resp" | jq -e '.error' > /dev/null; then
+  echo "$page_resp" | jq '.error' >&2
   exit 1
 fi
-
-# Build the properties update object entirely inside jq
-UPDATE_PAYLOAD=$(jq -n \
+update_payload=$(jq -n \
   --argjson updates "$UPDATES_JSON" \
-  --argjson pageSchema "$PAGE_RESP" \
+  --argjson pageSchema "$page_resp" \
   '
     {
       properties: (
@@ -54,13 +51,10 @@ UPDATE_PAYLOAD=$(jq -n \
       )
     }
   ')
-
-# Perform update
-UPDATE_RESP=$(notion_api PATCH "pages/$PAGE_ID" "$UPDATE_PAYLOAD")
-if echo "$UPDATE_RESP" | jq -e '.error' > /dev/null; then
-  echo "$UPDATE_RESP" | jq '.error' >&2
+update_resp=$(notion_api PATCH "pages/$PAGE_ID" "$update_payload")
+if echo "$update_resp" | jq -e '.error' > /dev/null; then
+  echo "$update_resp" | jq '.error' >&2
   exit 1
 fi
-
 echo "Page updated: $PAGE_ID"
-echo "$UPDATE_RESP" | jq '.'
+echo "$update_resp" | jq '.'
