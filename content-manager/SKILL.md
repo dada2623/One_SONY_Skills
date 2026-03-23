@@ -9,11 +9,11 @@ A focused wrapper around Notion API for managing your **content databases** - re
 
 ## Database IDs
 
-| Database | Database ID | Data Source ID |
-|----------|-------------|----------------|
-| 阅读记录 | `c71d68a42dba491aa04d682b43b1a93e` | `ff87d06d-f120-4d3c-9bc2-bb6c8aa7b38e` |
-| 游戏记录 | `941594b6504d45549070c02dd16da5c1` | `d3f5e8a2-1b4c-4d6e-9f8a-7c3b2d1e0f9a` |
-| 影视记录 | `8ad61aac3afd4101862e50986e36b9bc` | `a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d` |
+| Database | Database ID |
+|----------|-------------|
+| 阅读记录 | `c71d68a42dba491aa04d682b43b1a93e` |
+| 游戏记录 | `941594b6504d45549070c02dd16da5c1` |
+| 影视记录 | `8ad61aac3afd4101862e50986e36b9bc` |
 
 ## Setup
 
