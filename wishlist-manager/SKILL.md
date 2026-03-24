@@ -10,7 +10,6 @@ A focused wrapper around Notion API for your **Wishlist** database with intellig
 ## Database IDs
 
 - **Database ID**: `c1b6e15bc8e5472897f80fa3b0a18a02`
-- **Data Source ID**: `e957af75-e069-4a68-be37-8e54b2eb2fb8`
 - **Category Database ID**: `d8bc0e5b-4d7d-4271-835d-9b726055b9e0` (for 类别 relation)
 
 ## Setup
@@ -217,26 +216,21 @@ Show the created item details and ask if any fields need adjustment.
 
 ## Scripts
 
-The `scripts/` directory contains bash scripts for Unix systems with `jq` installed. On Windows without `jq`, use Node.js directly as shown above.
+通用脚本位于 `notion-utils` skill，请使用以下方式调用：
 
-- `scripts/create-page.sh` - Create a new page
-- `scripts/list-pages.sh` - List all pages
-- `scripts/get-page.sh` - Get page details
-- `scripts/update-page.sh` - Update page properties
-- `scripts/delete-page.sh` - Archive a page
-- `scripts/add-block.sh` - Add content block to page
+```bash
+# 列出 Wishlist 数据库的所有页面
+DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./skills/notion-utils/scripts/list-pages.sh
+
+# 在 Wishlist 数据库创建页面
+DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./skills/notion-utils/scripts/create-page.sh "工装夹克"
+
+# 更新页面状态
+./skills/notion-utils/scripts/update-page.sh <page_id> '{"状态":"已买"}'
+```
+
+**注意**: 路径基于 workspace 目录，skills 文件夹应位于 workspace 下。
 
 ## Node.js Helper Script
 
-A Node.js script `wishlist.js` is provided for Windows environments:
-
-```bash
-# List pages
-node wishlist.js list
-
-# Create page from product link
-node wishlist.js create "【淘宝】...「产品名称」 https://..."
-
-# Update page
-node wishlist.js update <page_id> '{"状态":"已买"}'
-```
+对于 Windows 环境，可使用 Node.js 直接调用 Notion API。参考 `notion-utils/SKILL.md` 中的示例代码。
