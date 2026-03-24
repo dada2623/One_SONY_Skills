@@ -252,7 +252,7 @@ const mediaData = {
 };
 ```
 
-### 电影封面获取规则（Trakt.tv）
+### 影视封面获取规则（Trakt.tv）
 当用户添加影视记录时，应自动从 Trakt.tv 搜索并获取电影/剧集封面图片，然后嵌入到 Notion 页面中。
 
 #### 操作步骤
@@ -278,7 +278,7 @@ const mediaData = {
 const pageId = "新创建的页面ID";
 const coverImageUrl = "https://example.com/movie-poster.jpg";
 
-// 方法1: 添加图片块到页面内容
+// 添加图片块到页面内容
 const imageBlock = {
   object: "block",
   type: "image",
@@ -290,7 +290,7 @@ const imageBlock = {
   }
 };
 
-// POST /v1/blocks/{page_id}/children
+// PATCH /v1/blocks/{page_id}/children
 fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
   method: 'PATCH',
   headers: {
@@ -302,25 +302,6 @@ fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
     children: [imageBlock]
   })
 });
-
-// 方法2: 设置页面封面（推荐）
-// PATCH /v1/pages/{page_id}
-fetch(`https://api.notion.com/v1/pages/${pageId}`, {
-  method: 'PATCH',
-  headers: {
-    'Authorization': `Bearer ${NOTION_API_KEY}`,
-    'Notion-Version': '2025-09-03',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    cover: {
-      type: "external",
-      external: {
-        url: coverImageUrl
-      }
-    }
-  })
-});
 ```
 
 #### 完整流程示例
@@ -329,8 +310,9 @@ fetch(`https://api.notion.com/v1/pages/${pageId}`, {
 // 1. 先在 Trakt.tv 搜索 "Oppenheimer"
 // 2. 找到电影详情页，获取封面图片 URL
 // 3. 创建 Notion 页面
-// 4. 设置页面封面
+// 4. 添加图片块到页面内容
 
+// 步骤1: 创建页面
 const pageData = {
   parent: { database_id: '8ad61aac3afd4101862e50986e36b9bc' },
   properties: {
@@ -338,15 +320,12 @@ const pageData = {
     "类别": { select: { name: "海外电影" } },
     "进行状态": { status: { name: "看过" } },
     "观看次数": { number: 1 }
-  },
-  // 同时设置封面
-  cover: {
-    type: "external",
-    external: {
-      url: "https://walter.trakt.tv/images/movies/poster.jpg"
-    }
   }
 };
+
+// 步骤2: 创建页面后，添加封面图片块
+const coverImageUrl = "https://walter.trakt.tv/images/movies/poster.jpg";
+// 使用 PATCH /v1/blocks/{page_id}/children 添加图片块
 ```
 
 #### 注意事项
