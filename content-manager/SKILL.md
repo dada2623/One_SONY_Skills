@@ -252,6 +252,108 @@ const mediaData = {
 };
 ```
 
+### 电影封面获取规则（Trakt.tv）
+当用户添加影视记录时，应自动从 Trakt.tv 搜索并获取电影/剧集封面图片，然后嵌入到 Notion 页面中。
+
+#### 操作步骤
+1. **访问 Trakt.tv 搜索页面**
+   - 打开 `https://app.trakt.tv/`
+   - 使用搜索功能，输入影视名称进行搜索
+
+2. **搜索并选择正确结果**
+   - 在搜索结果中找到匹配的电影或剧集
+   - 点击进入详情页获取封面图片 URL
+
+3. **获取封面图片 URL**
+   - 封面图片通常位于详情页的海报/封面区域
+   - 提取图片的直接链接（确保是高质量图片）
+
+4. **嵌入封面到 Notion 页面**
+   - 创建 Notion 页面后，使用 Notion API 添加图片块
+   - 将封面图片作为外部图片嵌入
+
+#### Notion API 添加图片块示例
+```javascript
+// 创建页面后，添加封面图片块
+const pageId = "新创建的页面ID";
+const coverImageUrl = "https://example.com/movie-poster.jpg";
+
+// 方法1: 添加图片块到页面内容
+const imageBlock = {
+  object: "block",
+  type: "image",
+  image: {
+    type: "external",
+    external: {
+      url: coverImageUrl
+    }
+  }
+};
+
+// POST /v1/blocks/{page_id}/children
+fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+  method: 'PATCH',
+  headers: {
+    'Authorization': `Bearer ${NOTION_API_KEY}`,
+    'Notion-Version': '2025-09-03',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    children: [imageBlock]
+  })
+});
+
+// 方法2: 设置页面封面（推荐）
+// PATCH /v1/pages/{page_id}
+fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+  method: 'PATCH',
+  headers: {
+    'Authorization': `Bearer ${NOTION_API_KEY}`,
+    'Notion-Version': '2025-09-03',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    cover: {
+      type: "external",
+      external: {
+        url: coverImageUrl
+      }
+    }
+  })
+});
+```
+
+#### 完整流程示例
+```javascript
+// 用户说"添加电影「奥本海默」，已看过"
+// 1. 先在 Trakt.tv 搜索 "Oppenheimer"
+// 2. 找到电影详情页，获取封面图片 URL
+// 3. 创建 Notion 页面
+// 4. 设置页面封面
+
+const pageData = {
+  parent: { database_id: '8ad61aac3afd4101862e50986e36b9bc' },
+  properties: {
+    "名称": { title: [{ text: { content: "奥本海默" } }] },
+    "类别": { select: { name: "海外电影" } },
+    "进行状态": { status: { name: "看过" } },
+    "观看次数": { number: 1 }
+  },
+  // 同时设置封面
+  cover: {
+    type: "external",
+    external: {
+      url: "https://walter.trakt.tv/images/movies/poster.jpg"
+    }
+  }
+};
+```
+
+#### 注意事项
+- Trakt.tv 搜索时使用英文原名可能获得更准确的结果
+- 如果找不到封面，可以跳过此步骤，不影响页面创建
+- 确保图片 URL 是可公开访问的直接链接
+
 ---
 
 ## API 使用说明
@@ -300,7 +402,7 @@ const mediaData = {
 - 状态: 想读
 
 ### 添加游戏
-> 添加游戏「黑神话：悟空」在 PC 上
+> 我想在 PC 上玩游戏「黑神话：悟空」
 
 解析：
 - 游戏名: 黑神话：悟空
@@ -308,10 +410,10 @@ const mediaData = {
 - 状态: 想玩
 
 ### 添加影视
-> 添加电影「流浪地球2」
+> 添加电影「流浪地球 2」
 
 解析：
-- 名称: 流浪地球2
+- 名称: 流浪地球 2  
 - 类别: 国产电影
 - 进行状态: 想看
 
