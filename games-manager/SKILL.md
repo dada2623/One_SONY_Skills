@@ -1,6 +1,6 @@
 ---
 name: games-manager
-description: Manage your Notion gaming records database - track games, platforms, playtime, and gaming progress. Use when user wants to add or manage game records, track gaming progress, or search games.
+description: Manage your Notion gaming records database - track games, platforms, playtime, and gaming progress. Use when user wants to add or manage game records. Automatically fetches MC scores from Metacritic and game images (Header, Capsule, Icon) from SteamGridDB.
 ---
 
 # games-manager
@@ -27,7 +27,7 @@ Ensure Notion API key is saved to `~/.config/notion/api_key` (Windows: `%USERPRO
 | 状态 | status | 游玩状态 |
 | 个人评分 | select | 1-5星评分 |
 | MC 评分 | number | Metacritic 评分 |
-| MC网址 | url | Metacritic 链接 |
+| MC 网址 | url | Metacritic 链接 |
 | 游戏时间 | number | 游玩时长（小时） |
 | 最后运行日期 | date | 最后一次运行游戏的日期 |
 | 创建时间 | created_time | 自动生成 |
@@ -75,6 +75,186 @@ PC_STEAM, PC, PC_XBOX, PC_GOG, PC_Epic, PC_模拟器, PC_学习版, PC_BattleNet
 - "Xbox" → XBOX
 - "iOS" 或 "iPhone" 或 "iPad" → iOS
 - "Mac" 或 "macOS" → Mac
+
+### 类型确认规则
+由于游戏类型可能较多且复杂，添加游戏时：
+1. 首先根据游戏名称自动推断类型（如"塞尔达"→冒险、开放世界）
+2. 向用户确认推断的类型是否正确
+3. 如果用户暂时不想确认，可以使用默认推断的类型
+4. 用户可以随时回来补充或修改类型
+
+**示例对话：**
+> 用户：添加游戏「黑神话：悟空」
+> Agent：我推断这个游戏的类型是：动作、冒险、RPG。是否正确？或者你想修改类型？
+> 用户：正确 / 暂时跳过 / 改成动作、魂类
+
+---
+
+### Metacritic 评分获取规则
+当用户添加游戏时，应自动从 Metacritic 获取游戏评分和链接。
+
+#### 操作步骤
+1. **访问 Metacritic 搜索**
+   - 打开 `https://www.metacritic.com/`
+   - 使用搜索功能，输入游戏名称进行搜索
+
+2. **选择正确结果**
+   - 在搜索结果中找到匹配的游戏
+   - 优先选择评分最高或最相关的版本
+
+3. **获取数据**
+   - **MC 评分**：页面上的 Metascore 数字
+   - **MC 网址**：游戏详情页的完整 URL
+
+#### 示例
+```javascript
+// 用户说"添加游戏「艾尔登法环」"
+// 1. 在 Metacritic 搜索 "Elden Ring"
+// 2. 找到游戏页面，获取评分 96
+// 3. 获取链接 https://www.metacritic.com/game/elden-ring/
+
+const gamingData = {
+  parent: { database_id: '941594b6504d45549070c02dd16da5c1' },
+  properties: {
+    "游戏名": { title: [{ text: { content: "艾尔登法环" } }] },
+    "MC 评分": { number: 96 },
+    "MC 网址": { url: "https://www.metacritic.com/game/elden-ring/" },
+    // ... 其他字段
+  }
+};
+```
+
+---
+
+### SteamGridDB 图片获取规则
+当用户添加游戏时，应自动从 SteamGridDB 获取游戏相关图片，并嵌入到 Notion 页面中。
+
+#### 图片类型
+| 图片类型 | SteamGridDB 名称 | 用途 | Notion 位置 |
+|----------|------------------|------|-------------|
+| 封面图 | Header | 页面封面 | 页面 cover 属性 |
+| 游戏内容图 | Capsule | 内容展示 | 页面内容图片块 |
+| 图标 | Client Icon | 游戏图标 | 页面内容图片块 |
+
+#### 操作步骤
+1. **访问 SteamGridDB**
+   - 打开 `https://www.steamgriddb.com/`
+   - 搜索游戏名称
+
+2. **进入资源页面**
+   - 点击搜索结果中的游戏
+   - 点击 "View original Steam assets"
+
+3. **获取图片链接**
+   - **Header**：找到 Header 图片，右键复制图片地址
+   - **Capsule**：找到 Capsule 图片，右键复制图片地址
+   - **Client Icon**：找到 Client Icon 图片，右键复制图片地址
+
+4. **嵌入到 Notion**
+   - **封面图**：设置页面 cover 属性
+   - **游戏内容图和图标**：添加图片块到页面内容
+
+**重要**：不要下载图片，直接使用图片 URL 链接，Notion 可以解析外部链接。
+
+#### Notion API 示例
+
+**设置页面封面（Header）**
+```javascript
+// 创建页面时设置封面
+const pageData = {
+  parent: { database_id: '941594b6504d45549070c02dd16da5c1' },
+  cover: {
+    type: "external",
+    external: {
+      url: "https://steamgriddb.com/image/xxx-header.png"
+    }
+  },
+  properties: {
+    "游戏名": { title: [{ text: { content: "塞尔达传说：王国之泪" } }] },
+    // ... 其他属性
+  }
+};
+```
+
+**添加游戏内容图和图标（Capsule + Client Icon）**
+```javascript
+// 创建页面后，添加图片块
+const pageId = "新创建的页面ID";
+const capsuleUrl = "https://steamgriddb.com/image/xxx-capsule.png";
+const iconUrl = "https://steamgriddb.com/image/xxx-icon.png";
+
+// 添加图片块到页面内容
+const imageBlocks = [
+  {
+    object: "block",
+    type: "image",
+    image: {
+      type: "external",
+      external: { url: capsuleUrl }
+    }
+  },
+  {
+    object: "block",
+    type: "image",
+    image: {
+      type: "external",
+      external: { url: iconUrl }
+    }
+  }
+];
+
+// PATCH /v1/blocks/{page_id}/children
+fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+  method: 'PATCH',
+  headers: {
+    'Authorization': `Bearer ${NOTION_API_KEY}`,
+    'Notion-Version': '2025-09-03',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    children: imageBlocks
+  })
+});
+```
+
+#### 完整流程示例
+```javascript
+// 用户说"添加游戏「塞尔达传说：王国之泪」"
+// 1. 在 Metacritic 搜索获取 MC 评分和链接
+// 2. 在 SteamGridDB 搜索获取 Header、Capsule、Client Icon 图片链接
+// 3. 确认游戏类型
+// 4. 创建 Notion 页面
+
+// 步骤1: 创建页面（包含封面和 MC 数据）
+const pageData = {
+  parent: { database_id: '941594b6504d45549070c02dd16da5c1' },
+  cover: {
+    type: "external",
+    external: {
+      url: "https://steamgriddb.com/image/zelda-totk-header.png"
+    }
+  },
+  properties: {
+    "游戏名": { title: [{ text: { content: "塞尔达传说：王国之泪" } }] },
+    "平台": { multi_select: [{ name: "Switch" }] },
+    "类型": { multi_select: [{ name: "冒险" }, { name: "开放世界" }] },
+    "状态": { status: { name: "想玩" } },
+    "MC 评分": { number: 96 },
+    "MC 网址": { url: "https://www.metacritic.com/game/the-legend-of-zelda-tears-of-the-kingdom/" }
+  }
+};
+
+// 步骤2: 创建页面后，添加 Capsule 和 Icon 图片块
+const capsuleUrl = "https://steamgriddb.com/image/zelda-totk-capsule.png";
+const iconUrl = "https://steamgriddb.com/image/zelda-totk-icon.png";
+// 使用 PATCH /v1/blocks/{page_id}/children 添加图片块
+```
+
+#### 注意事项
+- 如果 SteamGridDB 找不到游戏，可以跳过图片步骤
+- 如果只找到部分图片，只添加找到的部分
+- 确保图片 URL 是可公开访问的直接链接
+- 图片链接格式通常是 `.png` 或 `.jpg` 结尾
 
 ---
 
