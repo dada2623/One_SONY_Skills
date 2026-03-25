@@ -83,9 +83,6 @@ PC_STEAM, PC, PC_XBOX, PC_GOG, PC_Epic, PC_模拟器, PC_学习版, PC_BattleNet
 3. 如果用户暂时不想确认，可以使用默认推断的类型
 4. 用户可以随时回来补充或修改类型
 
-**可用类型选项：**
-体感, 休闲, 平台跳跃, 合作, 探索, 冒险, 肉鸽, 生存, 动作, MOBA, 开放世界, 银河恶魔城, 竞速, 策略, RPG, 模拟, 射击, 剧情, 格斗, 对战, 机甲, 运动, 恐怖, 解谜, 音乐, Galgame, 回合制, MMO, 派对, 塔防, 卡牌/棋盘, 共斗, 狼人杀, 种田
-
 **示例对话：**
 > 用户：添加游戏「黑神话：悟空」
 > Agent：我推断这个游戏的类型是：动作、冒险、RPG。是否正确？或者你想修改类型？
@@ -179,32 +176,57 @@ const pageData = {
 };
 ```
 
-**添加游戏内容图和图标（Capsule + Client Icon）**
+**添加游戏内容图和设置页面图标**
 ```javascript
-// 创建页面后，添加图片块
+// 创建页面后，添加 Capsule 图片块并设置页面图标
 const pageId = "新创建的页面ID";
 const capsuleUrl = "https://steamgriddb.com/image/xxx-capsule.png";
-const iconUrl = "https://steamgriddb.com/image/xxx-icon.png";
+// 图标链接示例（.ico 或 .png 格式）：
+// - Steam: https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/406350/6b2a798c3a2eb75cd7bc7a7cfccdf154f40903ca.ico
+// - SteamGridDB: https://cdn2.steamgriddb.com/icon/be89ed054d7e403ce222eca45bca7045/32/1024x1024.png
+const iconUrl = "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/406350/6b2a798c3a2eb75cd7bc7a7cfccdf154f40903ca.ico";
 
-// 添加图片块到页面内容
-const imageBlocks = [
-  {
-    object: "block",
-    type: "image",
-    image: {
-      type: "external",
-      external: { url: capsuleUrl }
-    }
+// 方法1: 在创建页面时直接设置 icon（推荐）
+// icon 可以在创建页面时直接设置，无需额外请求
+const pageData = {
+  parent: { database_id: '941594b6504d45549070c02dd16da5c1' },
+  icon: {
+    type: "external",
+    external: { url: iconUrl }
   },
-  {
-    object: "block",
-    type: "image",
-    image: {
+  cover: {
+    type: "external",
+    external: { url: headerUrl }
+  },
+  properties: { ... }
+};
+
+// 方法2: 创建页面后更新图标（如果需要单独设置）
+// PATCH /v1/pages/{page_id}
+fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+  method: 'PATCH',
+  headers: {
+    'Authorization': `Bearer ${NOTION_API_KEY}`,
+    'Notion-Version': '2025-09-03',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    icon: {
       type: "external",
       external: { url: iconUrl }
     }
+  })
+});
+
+// 添加 Capsule 图片块到页面内容
+const imageBlock = {
+  object: "block",
+  type: "image",
+  image: {
+    type: "external",
+    external: { url: capsuleUrl }
   }
-];
+};
 
 // PATCH /v1/blocks/{page_id}/children
 fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
@@ -215,7 +237,7 @@ fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    children: imageBlocks
+    children: [imageBlock]
   })
 });
 ```
@@ -228,14 +250,16 @@ fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
 // 3. 确认游戏类型
 // 4. 创建 Notion 页面
 
-// 步骤1: 创建页面（包含封面和 MC 数据）
+// 步骤1: 创建页面（包含封面、图标和 MC 数据）
 const pageData = {
   parent: { database_id: '941594b6504d45549070c02dd16da5c1' },
+  icon: {
+    type: "external",
+    external: { url: "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/406350/6b2a798c3a2eb75cd7bc7a7cfccdf154f40903ca.ico" }
+  },
   cover: {
     type: "external",
-    external: {
-      url: "https://steamgriddb.com/image/zelda-totk-header.png"
-    }
+    external: { url: "https://steamgriddb.com/image/zelda-totk-header.png" }
   },
   properties: {
     "游戏名": { title: [{ text: { content: "塞尔达传说：王国之泪" } }] },
@@ -247,17 +271,20 @@ const pageData = {
   }
 };
 
-// 步骤2: 创建页面后，添加 Capsule 和 Icon 图片块
+// 步骤2: 创建页面后，添加 Capsule 图片块到页面内容
 const capsuleUrl = "https://steamgriddb.com/image/zelda-totk-capsule.png";
-const iconUrl = "https://steamgriddb.com/image/zelda-totk-icon.png";
 // 使用 PATCH /v1/blocks/{page_id}/children 添加图片块
 ```
 
 #### 注意事项
+- **Client Icon**：应设置为 Notion 页面图标，而不是添加为图片块
+  - 推荐格式：`.ico` 或 `.png`
+  - 来源示例：Steam CDN、SteamGridDB 等
+- **Header**：设置为页面封面
+- **Capsule**：添加为页面内容中的图片块
 - 如果 SteamGridDB 找不到游戏，可以跳过图片步骤
 - 如果只找到部分图片，只添加找到的部分
 - 确保图片 URL 是可公开访问的直接链接
-- 图片链接格式通常是 `.png` 或 `.jpg` 结尾
 
 ---
 
