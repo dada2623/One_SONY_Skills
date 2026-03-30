@@ -93,38 +93,40 @@ const bookData = {
 };
 ```
 
-### LibraryThing 图片获取规则
-当用户通过豆瓣链接添加书籍时，应根据 ISBN 从 LibraryThing 获取图书封面图片，并嵌入到 Notion 页面中。
+## 图书封面获取规则
+当用户通过豆瓣链接添加书籍时，应获取图书封面图片，并添加为页面内容的图片块。
 
-#### 图片类型
-| 图片类型 | 用途 | Notion 位置 |
-|----------|------|-------------|
-| 封面图 | 内容展示 | 页面内容图片块 |
+### 图片来源（按优先级尝试）
 
-#### 操作步骤
-1. **获取 ISBN**
-   - 从豆瓣页面获取书籍的 ISBN（通常在图书信息区域）
+| 优先级 | 来源 | 适用场景 | 网址 |
+|--------|------|----------|------|
+| 1 | 微信读书 | 中文书籍（推荐） | `https://weread.qq.com/` |
+| 2 | LibraryThing | 英文书籍、国际书籍 | `https://www.librarything.com/` |
+| 3 | 豆瓣 | 备选（直接从豆瓣页面获取） | 豆瓣图书页面 |
 
-2. **访问 LibraryThing**
-   - 打开 `https://www.librarything.com/t/cn1`
-   - 在搜索框中输入 ISBN 进行搜索
+### 操作步骤
 
-3. **获取图片链接**
-   - 进入书籍详情页
-   - 找到封面图片，右键复制图片地址
+#### 方法1：微信读书（推荐中文书）
+1. 打开 `https://weread.qq.com/`
+2. 搜索书名或 ISBN
+3. 进入书籍详情页
+4. 找到封面图片，右键复制图片地址
 
-4. **嵌入到 Notion**
-   - **封面图**：添加图片块到页面内容
+#### 方法2：LibraryThing
+1. 打开 `https://www.librarything.com/`
+2. 搜索 ISBN 或书名
+3. 进入书籍详情页
+4. 找到封面图片，右键复制图片地址
 
-**重要**：不要下载图片，直接使用图片 URL 链接，Notion 可以解析外部链接。
+#### 方法3：豆瓣
+1. 从豆瓣图书页面直接获取封面图片
+2. 右键复制图片地址
 
-#### 示例：添加封面图片块到页面内容
+### 添加图片块到 Notion
 ```javascript
-// 创建页面后，添加封面图片块
-const pageId = "新创建的页面ID";
-const coverUrl = "https://www.librarything.com/xxx-cover.jpg";
+const pageId = "页面ID";
+const coverUrl = "封面图片URL";
 
-// 添加图片块到页面内容
 const imageBlock = {
   object: "block",
   type: "image",
@@ -147,6 +149,8 @@ fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
   })
 });
 ```
+
+**重要**：不要下载图片，直接使用图片 URL 链接，Notion 可以解析外部链接。
 
 ---
 
