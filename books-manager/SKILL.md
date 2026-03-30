@@ -93,6 +93,61 @@ const bookData = {
 };
 ```
 
+### LibraryThing 图片获取规则
+当用户通过豆瓣链接添加书籍时，应根据 ISBN 从 LibraryThing 获取图书封面图片，并嵌入到 Notion 页面中。
+
+#### 图片类型
+| 图片类型 | 用途 | Notion 位置 |
+|----------|------|-------------|
+| 封面图 | 内容展示 | 页面内容图片块 |
+
+#### 操作步骤
+1. **获取 ISBN**
+   - 从豆瓣页面获取书籍的 ISBN（通常在图书信息区域）
+
+2. **访问 LibraryThing**
+   - 打开 `https://www.librarything.com/t/cn1`
+   - 在搜索框中输入 ISBN 进行搜索
+
+3. **获取图片链接**
+   - 进入书籍详情页
+   - 找到封面图片，右键复制图片地址
+
+4. **嵌入到 Notion**
+   - **封面图**：添加图片块到页面内容
+
+**重要**：不要下载图片，直接使用图片 URL 链接，Notion 可以解析外部链接。
+
+#### 示例：添加封面图片块到页面内容
+```javascript
+// 创建页面后，添加封面图片块
+const pageId = "新创建的页面ID";
+const coverUrl = "https://www.librarything.com/xxx-cover.jpg";
+
+// 添加图片块到页面内容
+const imageBlock = {
+  object: "block",
+  type: "image",
+  image: {
+    type: "external",
+    external: { url: coverUrl }
+  }
+};
+
+// PATCH /v1/blocks/{page_id}/children
+fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+  method: 'PATCH',
+  headers: {
+    'Authorization': `Bearer ${NOTION_API_KEY}`,
+    'Notion-Version': '2025-09-03',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    children: [imageBlock]
+  })
+});
+```
+
 ---
 
 ## 创建阅读记录示例
