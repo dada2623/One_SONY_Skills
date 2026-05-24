@@ -157,7 +157,7 @@ fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
   method: 'PATCH',
   headers: {
     'Authorization': `Bearer ${NOTION_API_KEY}`,
-    'Notion-Version': '2025-09-03',
+    'Notion-Version': '2022-06-28',
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
@@ -235,7 +235,7 @@ const updateData = {
 ```javascript
 {
   'Authorization': `Bearer ${NOTION_API_KEY}`,
-  'Notion-Version': '2025-09-03',
+  'Notion-Version': '2022-06-28',
   'Content-Type': 'application/json'
 }
 ```

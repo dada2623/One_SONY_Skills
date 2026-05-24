@@ -16,7 +16,7 @@ notion_api() {
   local payload="$3"
   curl -s -X "$method" "https://api.notion.com/v1/$endpoint" \
     -H "Authorization: Bearer $NOTION_API_KEY" \
-    -H "Notion-Version: 2025-09-03" \
+    -H "Notion-Version: 2022-06-28" \
     -H "Content-Type: application/json" \
     ${payload:+-d "$payload"}
 }
