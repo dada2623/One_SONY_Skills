@@ -10,13 +10,13 @@ if [ -z "$DATABASE_ID" ]; then
   exit 1
 fi
 DATA_SOURCE_ID=$(get_data_source_id "$DATABASE_ID")
-TITLE_PROP=$(get_title_property "$DATA_source_id")
+TITLE_PROP=$(get_title_property "$DATA_SOURCE_ID")
 QUERY='{}'
-if jq -e --arg prop "创建时间" '.properties[$prop]' <<<"$(notion_api GET "data_sources/$DATA_source_id")" >/dev/null 2>&1; then
+if jq -e --arg prop "创建时间" '.properties[$prop]' <<<"$(notion_api GET "databases/$DATA_SOURCE_ID")" >/dev/null 2>&1; then
   QUERY=$(jq -n --arg ts "创建时间" '{sorts: [{property: $ts, direction: "descending"}]}')
 fi
 echo "Fetching pages..."
-RESP=$(notion_api POST "data_sources/$data_source_id/query" "$QUERY")
+RESP=$(notion_api POST "databases/$DATA_SOURCE_ID/query" "$QUERY")
 if echo "$RESP" | jq -e '.error' > /dev/null; then
   echo "$RESP" | jq '.error' >&2
   exit 1

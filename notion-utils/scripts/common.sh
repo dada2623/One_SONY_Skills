@@ -14,25 +14,38 @@ notion_api() {
   local method="$1"
   local endpoint="$2"
   local payload="$3"
-  curl -s -X "$method" "https://api.notion.com/v1/$endpoint" \
-    -H "Authorization: Bearer $NOTION_API_KEY" \
-    -H "Notion-Version: 2022-06-28" \
-    -H "Content-Type: application/json" \
-    ${payload:+-d "$payload"}
+  if [ -n "$payload" ]; then
+    local tmpfile
+    tmpfile=$(mktemp) || exit 1
+    printf '%s' "$payload" > "$tmpfile"
+    curl -s -X "$method" "https://api.notion.com/v1/$endpoint" \
+      -H "Authorization: Bearer $NOTION_API_KEY" \
+      -H "Notion-Version: 2022-06-28" \
+      -H "Content-Type: application/json" \
+      --data "@$tmpfile"
+    rm -f "$tmpfile"
+  else
+    curl -s -X "$method" "https://api.notion.com/v1/$endpoint" \
+      -H "Authorization: Bearer $NOTION_API_KEY" \
+      -H "Notion-Version: 2022-06-28" \
+      -H "Content-Type: application/json"
+  fi
 }
 
 get_data_source_id() {
   local database_id="$1"
+  # Normalize: remove hyphens for comparison (API returns hyphenated IDs)
+  local normalized_id="${database_id//-/}"
   # Search for the database to get its data_source_id
   local response
   response=$(notion_api POST "search" "{\"query\": \"\", \"filter\": {\"value\": \"database\", \"property\": \"object\"}}")
-  # Find the database with matching database_id in the results
-  echo "$response" | jq -r --arg db_id "$database_id" '.results[] | select(.id == $db_id or (.parent.database_id // "" == $db_id)) | .id' | head -n1
+  # Normalize both sides: strip hyphens from API response id before comparison
+  echo "$response" | jq -r --arg db_id "$normalized_id" '.results[] | select((.id | gsub("-"; "")) == $db_id) | .id' | head -n1
 }
 
 get_title_property() {
-  local data_source_id="$1"
+  local database_id="$1"
   local response
-  response=$(notion_api GET "data_sources/$data_source_id")
+  response=$(notion_api GET "databases/$database_id")
   echo "$response" | jq -r '.properties | to_entries[] | select(.value.type == "title") | .key' | head -n1
 }
