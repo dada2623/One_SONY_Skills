@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$script_dir/common.sh"
+source "$SCRIPT_DIR/common.sh"
 
 PAGE_ID="${1:-}"
 INCLUDE_BLOCKS="${2:-true}"

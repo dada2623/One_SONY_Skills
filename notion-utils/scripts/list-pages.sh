@@ -12,8 +12,8 @@ fi
 DATA_SOURCE_ID=$(get_data_source_id "$DATABASE_ID")
 TITLE_PROP=$(get_title_property "$DATA_SOURCE_ID")
 QUERY='{}'
-if jq -e --arg prop "创建时间" '.properties[$prop]' <<<"$(notion_api GET "databases/$DATA_SOURCE_ID")" >/dev/null 2>&1; then
-  QUERY=$(jq -n --arg ts "创建时间" '{sorts: [{property: $ts, direction: "descending"}]}')
+if jq -e --arg prop "created_time" '.properties[$prop]' <<<"$(notion_api GET "databases/$DATA_SOURCE_ID")" >/dev/null 2>&1; then
+  QUERY=$(jq -n --arg ts "created_time" '{sorts: [{property: $ts, direction: "descending"}]}')
 fi
 echo "Fetching pages..."
 RESP=$(notion_api POST "databases/$DATA_SOURCE_ID/query" "$QUERY")

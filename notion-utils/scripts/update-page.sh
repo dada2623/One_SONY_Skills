@@ -50,7 +50,8 @@ update_payload=$(jq -n \
         | add
       )
     }
-  ')
+  ' > /tmp/update_payload.json
+  update_payload=$(cat /tmp/update_payload.json)
 update_resp=$(notion_api PATCH "pages/$PAGE_ID" "$update_payload")
 if echo "$update_resp" | jq -e '.error' > /dev/null; then
   echo "$update_resp" | jq '.error' >&2

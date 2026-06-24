@@ -16,13 +16,14 @@ if [ -z "$PAGE_TITLE" ]; then
   exit 1
 fi
 DATA_SOURCE_ID=$(get_data_source_id "$DATABASE_ID")
-TITLE_PROP=$(get_title_property "$DATA_source_id")
+TITLE_PROP=$(get_title_property "$DATA_SOURCE_ID")
 echo "Creating page: $PAGE_TITLE..."
 CREATE_payload=$(jq -n \
   --arg db "$DATABASE_ID" \
   --arg title "$PAGE_TITLE" \
     --arg prop "$TITLE_PROP" \
-  '{parent: {database_id: $db}, properties: {($prop): {title: [{text: {content: $title}}]}}')
+  '{parent: {database_id: $db}, properties: {($prop): {title: [{text: {content: $title}}]}}}' > /tmp/create_payload.json)
+  create_payload=$(cat /tmp/create_payload.json)
 create_resp=$(notion_api POST "pages" "$create_payload")
 
 if echo "$create_resp" | jq -e '.error' > /dev/null; then
@@ -50,7 +51,8 @@ if [ -n "$PAGE_CONTENT" ]; then
         }
       ]
     }
-  ')
+  ' > /tmp/block_payload.json)
+  block_payload=$(cat /tmp/block_payload.json)
   block_resp=$(notion_api PATCH "blocks/$page_id/children" "$block_payload")
   if echo "$block_resp" | jq -e '.error' > /dev/null; then
     echo "$block_resp" | jq '.error' >&2
