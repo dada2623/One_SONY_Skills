@@ -1,6 +1,16 @@
 ---
 name: books-manager
 description: Manage your Notion reading records database - track books, reading progress, and reading habits. Use when user wants to add or manage book records, track reading progress, or search books via Douban.
+triggers:
+  - 图书
+  - 书籍
+  - 读书
+  - books-manager
+  - 新建书籍
+tools_required:
+  - filesystem
+  - shell
+  - web_fetch
 ---
 
 # books-manager

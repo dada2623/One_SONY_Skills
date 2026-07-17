@@ -1,6 +1,16 @@
 ---
 name: wishlist-manager
 description: Manage your Notion Wishlist database - create, list, update, delete pages with intelligent parsing. Use when user wants to add items to wishlist, manage wishlist items, or parse product links from e-commerce platforms (淘宝, 京东, 闲鱼, 拼多多, 天猫, Apple官网, 小米有品, 抖音, etc.). Automatically extracts product info from links and fills database fields.
+triggers:
+  - 愿望清单
+  - wishlist
+  - 心愿单
+  - wishlist-manager
+  - 购物清单
+tools_required:
+  - filesystem
+  - shell
+  - web_fetch
 ---
 
 # wishlist-manager

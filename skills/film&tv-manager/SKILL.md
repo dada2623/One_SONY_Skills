@@ -1,6 +1,16 @@
 ---
 name: film-tv-manager
 description: Manage your Notion media records database - track movies, TV shows, anime, and viewing habits. Use when user wants to add or manage film/TV records, track viewing progress, or search media via Douban/Trakt.tv.
+triggers:
+  - 影视
+  - 电影
+  - 剧集
+  - film-tv-manager
+  - 新建影视
+tools_required:
+  - filesystem
+  - shell
+  - web_fetch
 ---
 
 # film-tv-manager

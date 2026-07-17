@@ -1,6 +1,14 @@
 ---
 name: consumable-manager
 description: 管理Obsidian base耗材数据库，支持增删查改耗材物品。使用场景：(1) 列出/筛选耗材物品，(2) 添加新耗材，(3) 更新耗材信息（数量、位置、归档状态等），(4) 删除耗材，(5) 搜索耗材，(6) 查看统计信息
+triggers:
+  - 耗材
+  - 消耗品
+  - consumable-manager
+  - 耗材管理
+tools_required:
+  - filesystem
+  - shell
 ---
 
 # 耗材管理系统

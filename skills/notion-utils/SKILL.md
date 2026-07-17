@@ -1,11 +1,13 @@
 ---
 name: notion-utils
 description: 通用 Notion API 脚本工具集，提供页面创建、查询、更新、删除、添加内容块等常用操作。适用于所有 Notion 数据库。
-metadata:
-  {
-    "openclaw":
-      { "emoji": "🔧", "requires": { "env": ["NOTION_API_KEY"] }, "primaryEnv": "NOTION_API_KEY" },
-  }
+triggers:
+  - notion
+  - Notion
+  - notion-utils
+tools_required:
+  - filesystem
+  - shell
 ---
 
 # notion-utils

@@ -1,6 +1,16 @@
 ---
 name: games-manager
 description: Manage your Notion gaming records database - track games, platforms, playtime, and gaming progress. Use when user wants to add or manage game records. Automatically fetches MC scores from Metacritic and game images (Header, Capsule, Icon) from SteamGridDB.
+triggers:
+  - 游戏
+  - 游戏记录
+  - games-manager
+  - 新建游戏
+  - 添加游戏
+tools_required:
+  - filesystem
+  - shell
+  - web_fetch
 ---
 
 # games-manager
