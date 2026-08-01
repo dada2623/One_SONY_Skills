@@ -1,6 +1,6 @@
 ---
 name: games-manager
-description: Manage your Notion gaming records database - track games, platforms, playtime, and gaming progress. Use when user wants to add or manage game records. Automatically fetches MC scores from Metacritic and game images (Header, Capsule, Icon) from SteamGridDB.
+description: Manage your Notion gaming records database - track games, platforms, playtime, and gaming progress. Use when user wants to add or manage game records. Automatically fetches MC scores from Metacritic. Game images (Header, Capsule, Icon) are NOT auto-fetched from SteamGridDB - user will add them manually if needed.
 triggers:
   - 游戏
   - 游戏记录
@@ -61,6 +61,20 @@ PC_STEAM, PC, PC_XBOX, PC_GOG, PC_Epic, PC_模拟器, PC_学习版, PC_BattleNet
 - ⭐⭐⭐
 - ⭐⭐
 - ⭐
+
+---
+
+## 核心原则
+
+### ❌ 禁止事项
+1. **严禁**从 SteamGridDB 自动获取图片 —— 用户明确表示放弃此要求，图片留空由用户自行补充
+2. **严禁**在未查询现有页面数据的情况下，询问用户是否要补充平台、类型、评分等信息 —— 必须先查询页面现有属性，只有字段确实为空时才可提示
+
+### ✅ 必须做
+1. 新建/更新游戏前，**先查询数据库确认是否已存在同名游戏**，存在则更新而非新建
+2. 更新现有页面时，**先 GET 页面属性**，检查哪些字段已有值，仅对空字段提示或补全
+3. 更新页面前，**先把页面里已经有的信息列给用户看**，确认后再操作
+4. Metacritic 评分和链接继续自动获取（这是有用的）
 
 ---
 
@@ -136,165 +150,11 @@ const gamingData = {
 
 ---
 
-### SteamGridDB 图片获取规则
-当用户添加游戏时，应自动从 SteamGridDB 获取游戏相关图片，并嵌入到 Notion 页面中。
-
-#### 图片类型
-| 图片类型 | SteamGridDB 名称 | 用途 | Notion 位置 |
-|----------|------------------|------|-------------|
-| 封面图 | Header | 页面封面 | 页面 cover 属性 |
-| 游戏内容图 | Capsule | 内容展示 | 页面内容图片块 |
-| 图标 | Client Icon | 游戏图标 | 页面内容图片块 |
-
-#### 操作步骤
-1. **访问 SteamGridDB**
-   - 打开 `https://www.steamgriddb.com/`
-   - 搜索游戏名称
-
-2. **进入资源页面**
-   - 点击搜索结果中的游戏
-   - 点击 "View original Steam assets"
-
-3. **获取图片链接**
-   - **Header**：找到 Header 图片，右键复制图片地址
-   - **Capsule**：找到 Capsule 图片，右键复制图片地址
-   - **Client Icon**：找到 Client Icon 图片，右键复制图片地址
-
-4. **嵌入到 Notion**
-   - **封面图**：设置页面 cover 属性
-   - **游戏内容图和图标**：添加图片块到页面内容
-
-**重要**：不要下载图片，直接使用图片 URL 链接，Notion 可以解析外部链接。
-
-#### Notion API 示例
-
-**设置页面封面（Header）**
-```javascript
-// 创建页面时设置封面
-const pageData = {
-  parent: { database_id: '941594b6504d45549070c02dd16da5c1' },
-  cover: {
-    type: "external",
-    external: {
-      url: "https://steamgriddb.com/image/xxx-header.png"
-    }
-  },
-  properties: {
-    "游戏名": { title: [{ text: { content: "塞尔达传说：王国之泪" } }] },
-    // ... 其他属性
-  }
-};
-```
-
-**添加游戏内容图和设置页面图标**
-```javascript
-// 创建页面后，添加 Capsule 图片块并设置页面图标
-const pageId = "新创建的页面ID";
-const capsuleUrl = "https://steamgriddb.com/image/xxx-capsule.png";
-// 图标链接示例（.ico 或 .png 格式）：
-// - Steam: https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/406350/6b2a798c3a2eb75cd7bc7a7cfccdf154f40903ca.ico
-// - SteamGridDB: https://cdn2.steamgriddb.com/icon/be89ed054d7e403ce222eca45bca7045/32/1024x1024.png
-const iconUrl = "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/406350/6b2a798c3a2eb75cd7bc7a7cfccdf154f40903ca.ico";
-
-// 方法1: 在创建页面时直接设置 icon（推荐）
-// icon 可以在创建页面时直接设置，无需额外请求
-const pageData = {
-  parent: { database_id: '941594b6504d45549070c02dd16da5c1' },
-  icon: {
-    type: "external",
-    external: { url: iconUrl }
-  },
-  cover: {
-    type: "external",
-    external: { url: headerUrl }
-  },
-  properties: { ... }
-};
-
-// 方法2: 创建页面后更新图标（如果需要单独设置）
-// PATCH /v1/pages/{page_id}
-fetch(`https://api.notion.com/v1/pages/${pageId}`, {
-  method: 'PATCH',
-  headers: {
-    'Authorization': `Bearer ${NOTION_API_KEY}`,
-    'Notion-Version': '2022-06-28',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    icon: {
-      type: "external",
-      external: { url: iconUrl }
-    }
-  })
-});
-
-// 添加 Capsule 图片块到页面内容
-const imageBlock = {
-  object: "block",
-  type: "image",
-  image: {
-    type: "external",
-    external: { url: capsuleUrl }
-  }
-};
-
-// PATCH /v1/blocks/{page_id}/children
-fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
-  method: 'PATCH',
-  headers: {
-    'Authorization': `Bearer ${NOTION_API_KEY}`,
-    'Notion-Version': '2022-06-28',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    children: [imageBlock]
-  })
-});
-```
-
-#### 完整流程示例
-```javascript
-// 用户说"添加游戏「塞尔达传说：王国之泪」"
-// 1. 在 Metacritic 搜索获取 MC 评分和链接
-// 2. 在 SteamGridDB 搜索获取 Header、Capsule、Client Icon 图片链接
-// 3. 确认游戏类型
-// 4. 创建 Notion 页面
-
-// 步骤1: 创建页面（包含封面、图标和 MC 数据）
-const pageData = {
-  parent: { database_id: '941594b6504d45549070c02dd16da5c1' },
-  icon: {
-    type: "external",
-    external: { url: "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/406350/6b2a798c3a2eb75cd7bc7a7cfccdf154f40903ca.ico" }
-  },
-  cover: {
-    type: "external",
-    external: { url: "https://steamgriddb.com/image/zelda-totk-header.png" }
-  },
-  properties: {
-    "游戏名": { title: [{ text: { content: "塞尔达传说：王国之泪" } }] },
-    "平台": { multi_select: [{ name: "Switch" }] },
-    "类型": { multi_select: [{ name: "冒险" }, { name: "开放世界" }] },
-    "状态": { status: { name: "想玩" } },
-    "MC 评分": { number: 96 },
-    "MC 网址": { url: "https://www.metacritic.com/game/the-legend-of-zelda-tears-of-the-kingdom/" }
-  }
-};
-
-// 步骤2: 创建页面后，添加 Capsule 图片块到页面内容
-const capsuleUrl = "https://steamgriddb.com/image/zelda-totk-capsule.png";
-// 使用 PATCH /v1/blocks/{page_id}/children 添加图片块
-```
-
-#### 注意事项
-- **Client Icon**：应设置为 Notion 页面图标，而不是添加为图片块
-  - 推荐格式：`.ico` 或 `.png`
-  - 来源示例：Steam CDN、SteamGridDB 等
-- **Header**：设置为页面封面
-- **Capsule**：添加为页面内容中的图片块
-- 如果 SteamGridDB 找不到游戏，可以跳过图片步骤
-- 如果只找到部分图片，只添加找到的部分
-- 确保图片 URL 是可公开访问的直接链接
+### 图片处理规则（已废弃）
+**用户已明确放弃 SteamGridDB 自动获取图片的要求。**
+- 封面图、图标、内容图均**留空**，不再自动获取
+- 用户会自行在 Notion 中补充
+- 如用户后续明确要求，可临时恢复，但默认不做
 
 ---
 
