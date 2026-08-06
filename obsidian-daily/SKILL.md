@@ -11,6 +11,8 @@ Create, append to, read, and search Obsidian daily notes with the official `obsi
 
 Requires Obsidian 1.12.7+ with **Command line interface** enabled (Settings → General). The app must be running; if it is not, the first command launches it.
 
+**Never run `obsidian` in a sandbox — from the very first command.** The CLI connects to the running app over a local connection; a restricted sandbox crashes the app (SIGABRT, exit 134). Always run it unsandboxed: if the environment restricts commands, request approval/exemption before executing, and do not attempt a sandboxed run first.
+
 Verify:
 
 ```bash
@@ -74,6 +76,8 @@ obsidian vault="Obsidian" daily:append content="ENTRY_TEXT"
 
 Appends on a new line by default. Use `inline` to append without a newline, `open` to open the file after appending.
 
+`daily:append` targets today's note. Whether it auto-creates a missing note has not been verified; if the note is missing, create it first (see below) and verify the write with `daily:read`.
+
 Get today's note path (useful for scripts):
 
 ```bash
@@ -82,8 +86,26 @@ obsidian vault="Obsidian" daily:path
 
 ### Append to a Specific Date Note
 
+`append` only works on files that **already exist**. On a missing file it exits 0 with no output and creates nothing — do not rely on the exit code.
+
 ```bash
 obsidian vault="Obsidian" append path="diaries/2026-08-06.md" content="ENTRY_TEXT"
+```
+
+Create a missing date note first, then append:
+
+```bash
+obsidian vault="Obsidian" create path="diaries/2026-08-06.md" content="- FIRST_ENTRY"
+obsidian vault="Obsidian" append path="diaries/2026-08-06.md" content="- SECOND_ENTRY"
+```
+
+### Update an Existing Note
+
+The CLI has no in-place edit command. To change an existing note (e.g. fix a mood tag), read its full content first, edit it, then rewrite the whole file with `overwrite`:
+
+```bash
+obsidian vault="Obsidian" read path="diaries/2026-08-05.md"
+obsidian vault="Obsidian" create path="diaries/2026-08-05.md" overwrite content="<FULL_EDITED_CONTENT>"
 ```
 
 ### Read Notes
@@ -185,6 +207,7 @@ obsidian vault="Obsidian" tags counts sort=count
 - `#情绪/焦虑`
 - `#情绪/疲惫`
 - `#情绪/低落`
+- `#情绪/烦躁`
 
 **Event tags (1–3 per entry, reuse existing).** Examples already in the vault: `#开会` `#上班` `#学习` `#书籍` `#编程` `#论文` `#视频` `#播客` `#写作` `#消费` `#新闻` `#英文` `#发言稿` `#答辩`. If no existing tag fits an event, create one short new tag only when necessary.
 
@@ -197,7 +220,8 @@ obsidian vault="Obsidian" daily:append content="- 和团队开周会，确定 Q3
 ## Notes
 
 - The app must be running; the CLI connects to the running Obsidian instance and launches it automatically if closed.
-- If the CLI crashes (SIGABRT) or cannot connect, it is likely blocked by a restricted sandbox — run it unsandboxed, as it communicates with the app over a local connection.
+- **Never run `obsidian` in a sandbox.** A restricted sandbox crashes the app (SIGABRT, exit 134). Always run commands unsandboxed from the first call — do not try the sandbox first (see Setup).
+- **Exit code 0 does not mean success.** `append` on a missing file and `read` on a missing file both exit 0 while doing nothing or printing an error. Judge success by the output and verify every write by reading the file back.
 - If `obsidian version` warns the installer is out of date, download the latest installer from https://obsidian.md/download for full CLI support.
 - If a note lands in the wrong vault, the `vault="Obsidian"` parameter was omitted — every write must include it.
 - Use `\n` for newlines and `\t` for tabs in `content=` values.
