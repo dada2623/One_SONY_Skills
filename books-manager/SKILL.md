@@ -77,9 +77,10 @@ Kindle, iPad, 手机, 电脑, 纸质书
 ### ✅ 必须做
 1. 新建/更新书籍前，**先查询数据库确认是否已存在同名书籍**，存在则更新而非新建
 2. 更新现有页面时，**先 GET 页面属性**，检查哪些字段已有值，仅对空字段提示或补全
-3. 更新页面前，**先把页面里已经有的信息列给用户看**，确认后再操作
-4. 豆瓣链接自动识别和评分获取继续保留（这是有用的）
-5. 图书封面获取继续保留（用户未放弃此要求）
+3. 更新前**必须 GET 页面属性确认每个字段的 type**，再按类型构造 payload（multi_select 必须传对象数组 `[{"name": "选项"}]`，不能传字符串数组）
+4. 更新页面前，**先把页面里已经有的信息列给用户看**，确认后再操作
+5. 豆瓣链接自动识别和评分获取继续保留（这是有用的）
+6. 图书封面获取继续保留（用户未放弃此要求）
 
 ---
 
@@ -254,13 +255,16 @@ const updateData = {
 
 ```bash
 # 列出阅读记录数据库的所有页面
-DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ./skills/notion-utils/scripts/list-pages.sh
+DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ./notion-utils/scripts/list-pages.sh
 
 # 在阅读记录数据库创建页面
-DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ./skills/notion-utils/scripts/create-page.sh "百年孤独"
+DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ./notion-utils/scripts/create-page.sh "百年孤独"
 
-# 更新页面状态
-./skills/notion-utils/scripts/update-page.sh <page_id> '{"状态":"已读完"}'
+# 读取页面属性与内容（更新前建议先跑）
+./notion-utils/scripts/get-page.sh <page_id>
+
+# 更新页面状态（multi_select 字段如 类型/阅读方式 直接传字符串数组即可，脚本自动转换）
+./notion-utils/scripts/update-page.sh <page_id> '{"状态":"已读完","阅读方式":["Kindle"]}'
 ```
 
-**注意**: 路径基于 workspace 目录，skills 文件夹应位于 workspace 下。
+**注意**: 路径基于仓库根目录（脚本已从 `skills/` 子目录上移）；复杂更新建议把 JSON 写入文件再传入，避免转义问题。

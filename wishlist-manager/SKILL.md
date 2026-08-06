@@ -230,16 +230,19 @@ Show the created item details and ask if any fields need adjustment.
 
 ```bash
 # 列出 Wishlist 数据库的所有页面
-DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./skills/notion-utils/scripts/list-pages.sh
+DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./notion-utils/scripts/list-pages.sh
 
 # 在 Wishlist 数据库创建页面
-DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./skills/notion-utils/scripts/create-page.sh "工装夹克"
+DATABASE_ID=c1b6e15bc8e5472897f80fa3b0a18a02 ./notion-utils/scripts/create-page.sh "工装夹克"
+
+# 读取页面属性与内容（更新前建议先跑）
+./notion-utils/scripts/get-page.sh <page_id>
 
 # 更新页面状态
-./skills/notion-utils/scripts/update-page.sh <page_id> '{"状态":"已买"}'
+./notion-utils/scripts/update-page.sh <page_id> '{"状态":"已买"}'
 ```
 
-**注意**: 路径基于 workspace 目录，skills 文件夹应位于 workspace 下。
+**注意**: 路径基于仓库根目录（脚本已从 `skills/` 子目录上移）；multi_select 字段直接传字符串数组即可，脚本自动转换；复杂更新建议用 JSON 文件传入。
 
 ## Node.js Helper Script
 

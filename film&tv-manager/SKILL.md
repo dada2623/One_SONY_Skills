@@ -84,10 +84,11 @@ Ensure Notion API key is saved to `~/.config/notion/api_key` (Windows: `%USERPRO
 ### ✅ 必须做
 1. 新建/更新影视前，**先查询数据库确认是否已存在同名影视**，存在则更新而非新建
 2. 更新现有页面时，**先 GET 页面属性**，检查哪些字段已有值，仅对空字段提示或补全
-3. 更新页面前，**先把页面里已经有的信息列给用户看**，确认后再操作
-4. 更新完成后，**检查「个人评分」「观看方式」等字段是否为空**，为空则提醒用户补全
-5. 豆瓣链接自动识别和评分获取继续保留（这是有用的）
-6. Trakt.tv 封面获取继续保留（用户未放弃此要求）
+3. 更新前**必须 GET 页面属性确认每个字段的 type**，再按类型构造 payload（multi_select 必须传对象数组 `[{"name": "选项"}]`，不能传字符串数组）
+4. 更新页面前，**先把页面里已经有的信息列给用户看**，确认后再操作
+5. 更新完成后，**检查「个人评分」「观看方式」等字段是否为空**，为空则提醒用户补全
+6. 豆瓣链接自动识别和评分获取继续保留（这是有用的）
+7. Trakt.tv 封面获取继续保留（用户未放弃此要求）
 
 ---
 
@@ -259,6 +260,21 @@ const updateData = {
 // PATCH /v1/pages/{page_id}
 ```
 
+### multi_select 更新示例
+
+> 更新观看方式（multi_select 字段）
+
+```javascript
+const updateData = {
+  properties: {
+    "观看方式": { multi_select: [{ name: "电视" }, { name: "投影" }] }
+  }
+};
+// PATCH /v1/pages/{page_id}
+```
+
+**注意**：Notion API 要求 multi_select 传**对象数组** `[{"name": "电视"}]`，不能传字符串数组 `["电视"]`。使用 `update-page.sh` 时直接传 `{"观看方式": ["电视"]}` 即可，脚本会自动完成转换。
+
 ---
 
 ## API 使用说明
@@ -291,21 +307,32 @@ const updateData = {
 | number | `{ number: 5 }` |
 | url | `{ url: "https://..." }` |
 
+**注意**：`multi_select` 必须传对象数组 `[{"name": "A"}]`，不能传字符串数组。
+
 ---
 
 ## Scripts
 
-通用脚本位于 `notion-utils` skill，请使用以下方式调用：
+通用脚本位于 `notion-utils` skill（仓库根目录），请使用以下方式调用：
 
 ```bash
 # 列出影视记录数据库的所有页面
-DATABASE_ID=8ad61aac3afd4101862e50986e36b9bc ./skills/notion-utils/scripts/list-pages.sh
+DATABASE_ID=8ad61aac3afd4101862e50986e36b9bc ./notion-utils/scripts/list-pages.sh
 
 # 在影视记录数据库创建页面
-DATABASE_ID=8ad61aac3afd4101862e50986e36b9bc ./skills/notion-utils/scripts/create-page.sh "奥本海默"
+DATABASE_ID=8ad61aac3afd4101862e50986e36b9bc ./notion-utils/scripts/create-page.sh "奥本海默"
 
-# 更新页面状态
-./skills/notion-utils/scripts/update-page.sh <page_id> '{"进行状态":"看过"}'
+# 读取页面属性与内容
+./notion-utils/scripts/get-page.sh <page_id>
+
+# 更新页面状态（内联 JSON；multi_select 传字符串数组即可，脚本自动转换）
+./notion-utils/scripts/update-page.sh <page_id> '{"进行状态":"看过","观看方式":["电视"]}'
+
+# 更新页面（推荐：使用 JSON 文件，避免 shell 转义问题）
+cat > /tmp/updates.json <<'EOF'
+{"进行状态":"看过","观看方式":["电视"],"个人评分":"⭐⭐⭐⭐","观看次数":1,"结束日期":"2026-08-06"}
+EOF
+./notion-utils/scripts/update-page.sh <page_id> /tmp/updates.json
 ```
 
-**注意**: 路径基于 workspace 目录，skills 文件夹应位于 workspace 下。
+**注意**: 路径基于仓库根目录（脚本已从 `skills/` 子目录上移到根目录）。
