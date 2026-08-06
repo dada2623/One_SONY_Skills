@@ -18,18 +18,24 @@ obsidian version
 obsidian vaults
 ```
 
-The CLI has no "default vault". It targets the vault of the current working directory, otherwise the most recently focused vault. Target a specific vault with `vault=<name>` as the first parameter:
+**Default vault: `Obsidian`.** This skill always targets the `Obsidian` vault (path `/Users/hu/Library/CloudStorage/OneDrive-个人/应用/Obsidian`). Never rely on the current working directory or the most recently focused vault — those can silently redirect writes to the wrong vault (e.g. `耗材管理`).
+
+Every command below passes `vault="Obsidian"` as the first parameter. Only use a different vault when the user explicitly asks for it:
 
 ```bash
-obsidian vault="Work" daily
+obsidian vault="Obsidian" daily
 ```
 
 ### Daily Notes Location
 
-All daily notes live in the `diaries/` folder (configured in the vault's Daily notes settings). Verify:
+All daily notes live in the `diaries/` folder of the **Obsidian** vault (configured in the vault's Daily notes settings). Today's note resolves to:
+
+`/Users/hu/Library/CloudStorage/OneDrive-个人/应用/Obsidian/diaries/2026-08-06.md`
+
+Verify:
 
 ```bash
-obsidian daily:path   # → diaries/2026-08-06.md
+obsidian vault="Obsidian" daily:path   # → diaries/2026-08-06.md
 ```
 
 ## Date Handling
@@ -55,7 +61,7 @@ Cross-platform relative dates (GNU first, BSD fallback):
 ### Open/Create Today's Note
 
 ```bash
-obsidian daily
+obsidian vault="Obsidian" daily
 ```
 
 Opens today's daily note in Obsidian, creating it if it doesn't exist. Folder, date format, and template come from the vault's Daily notes settings.
@@ -63,7 +69,7 @@ Opens today's daily note in Obsidian, creating it if it doesn't exist. Folder, d
 ### Append Entry to Today's Note
 
 ```bash
-obsidian daily:append content="ENTRY_TEXT"
+obsidian vault="Obsidian" daily:append content="ENTRY_TEXT"
 ```
 
 Appends on a new line by default. Use `inline` to append without a newline, `open` to open the file after appending.
@@ -71,13 +77,13 @@ Appends on a new line by default. Use `inline` to append without a newline, `ope
 Get today's note path (useful for scripts):
 
 ```bash
-obsidian daily:path
+obsidian vault="Obsidian" daily:path
 ```
 
 ### Append to a Specific Date Note
 
 ```bash
-obsidian append path="diaries/2026-08-06.md" content="ENTRY_TEXT"
+obsidian vault="Obsidian" append path="diaries/2026-08-06.md" content="ENTRY_TEXT"
 ```
 
 ### Read Notes
@@ -85,43 +91,43 @@ obsidian append path="diaries/2026-08-06.md" content="ENTRY_TEXT"
 Today:
 
 ```bash
-obsidian daily:read
+obsidian vault="Obsidian" daily:read
 ```
 
 Specific date:
 
 ```bash
-obsidian read path="diaries/2025-01-10.md"
+obsidian vault="Obsidian" read path="diaries/2025-01-10.md"
 ```
 
 Relative date (yesterday):
 
 ```bash
-obsidian read path="diaries/$(date -d yesterday +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d).md"
+obsidian vault="Obsidian" read path="diaries/$(date -d yesterday +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d).md"
 ```
 
 ### Search Content
 
 ```bash
-obsidian search query="TERM"
-obsidian search:context query="TERM"   # grep-style output with line context
+obsidian vault="Obsidian" search query="TERM"
+obsidian vault="Obsidian" search:context query="TERM"   # grep-style output with line context
 ```
 
 ### Interactive Browse
 
 ```bash
-obsidian
+obsidian vault="Obsidian"
 ```
 
 Opens the TUI with autocomplete and fuzzy navigation.
 
 ### Specific Vault
 
-Add `vault="NAME"` as the first parameter to any command:
+Every command in this skill already passes `vault="Obsidian"` (see Setup). Keep it unless the user explicitly names a different vault:
 
 ```bash
-obsidian vault="Work" daily
-obsidian vault="Work" read path="diaries/2025-01-10.md"
+obsidian vault="Obsidian" daily
+obsidian vault="Obsidian" read path="diaries/2025-01-10.md"
 ```
 
 ## Use Cases
@@ -129,37 +135,37 @@ obsidian vault="Work" read path="diaries/2025-01-10.md"
 **Journal entry:**
 
 ```bash
-obsidian daily:append content="- Went to the doctor #情绪/平静"
+obsidian vault="Obsidian" daily:append content="- Went to the doctor #情绪/平静"
 ```
 
 **Task:**
 
 ```bash
-obsidian daily:append content="- [ ] Buy groceries"
+obsidian vault="Obsidian" daily:append content="- [ ] Buy groceries"
 ```
 
 **Link:**
 
 ```bash
-obsidian daily:append content="- https://github.com/anthropics/skills"
+obsidian vault="Obsidian" daily:append content="- https://github.com/anthropics/skills"
 ```
 
 **Timestamped log:**
 
 ```bash
-obsidian daily:append content="- $(date +%H:%M) This is a log line"
+obsidian vault="Obsidian" daily:append content="- $(date +%H:%M) This is a log line"
 ```
 
 **Read last Friday:**
 
 ```bash
-obsidian read path="diaries/$(date -d 'last friday' +%Y-%m-%d 2>/dev/null || date -v-friday +%Y-%m-%d).md"
+obsidian vault="Obsidian" read path="diaries/$(date -d 'last friday' +%Y-%m-%d 2>/dev/null || date -v-friday +%Y-%m-%d).md"
 ```
 
 **Search for "meeting":**
 
 ```bash
-obsidian search query="meeting"
+obsidian vault="Obsidian" search query="meeting"
 ```
 
 ## Tags
@@ -169,7 +175,7 @@ Every diary entry carries a few short tags for retrieval: one mood tag plus 1–
 **Reuse existing tags.** Check the vault before choosing:
 
 ```bash
-obsidian tags counts sort=count
+obsidian vault="Obsidian" tags counts sort=count
 ```
 
 **Mood tag (1 per entry, required).** The vault currently has no mood tags; use this minimal set (create only these):
@@ -185,7 +191,7 @@ obsidian tags counts sort=count
 **Example:**
 
 ```bash
-obsidian daily:append content="- 和团队开周会，确定 Q3 目标 #开会 #情绪/平静"
+obsidian vault="Obsidian" daily:append content="- 和团队开周会，确定 Q3 目标 #开会 #情绪/平静"
 ```
 
 ## Notes
@@ -193,5 +199,6 @@ obsidian daily:append content="- 和团队开周会，确定 Q3 目标 #开会 #
 - The app must be running; the CLI connects to the running Obsidian instance and launches it automatically if closed.
 - If the CLI crashes (SIGABRT) or cannot connect, it is likely blocked by a restricted sandbox — run it unsandboxed, as it communicates with the app over a local connection.
 - If `obsidian version` warns the installer is out of date, download the latest installer from https://obsidian.md/download for full CLI support.
+- If a note lands in the wrong vault, the `vault="Obsidian"` parameter was omitted — every write must include it.
 - Use `\n` for newlines and `\t` for tabs in `content=` values.
 - Use `--copy` on any command to copy output to the clipboard; use `silent` to prevent files from opening.
