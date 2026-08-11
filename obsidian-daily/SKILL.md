@@ -7,6 +7,16 @@ description: Manage Obsidian Daily Notes via the official Obsidian CLI. Create a
 
 Create, append to, read, and search Obsidian daily notes with the official `obsidian` CLI.
 
+## First Step: Query Today's Date
+
+**On every trigger, query the real current date first.** The agent may have been running for a long time (persistent gateway/session), so any date it "remembers" can be stale or wrong — writing to the wrong date note is a silent, hard-to-notice error.
+
+```bash
+date +%Y-%m-%d
+```
+
+Treat the output as the authoritative "today" for the whole task: use it to pick the note path and to anchor every relative date below. Never rely on a date from memory or session start; when unsure whether today's note exists, verify with `obsidian vault="Obsidian" daily:path` before writing.
+
 ## Setup
 
 Requires Obsidian 1.12.7+ with **Command line interface** enabled (Settings → General). The app must be running; if it is not, the first command launches it.
@@ -42,13 +52,7 @@ obsidian vault="Obsidian" daily:path   # → diaries/2026-08-06.md
 
 ## Date Handling
 
-Get current date:
-
-```bash
-date +%Y-%m-%d
-```
-
-Cross-platform relative dates (GNU first, BSD fallback):
+Today's date comes from the mandatory query in **First Step** above — never reuse a date captured at session start. Use it as the anchor for the relative-date commands below (GNU first, BSD fallback):
 
 | Reference | Command |
 |-----------|---------|
