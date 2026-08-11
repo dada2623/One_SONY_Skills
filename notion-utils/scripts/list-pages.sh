@@ -16,13 +16,27 @@ if jq -e --arg prop "created_time" '.properties[$prop]' <<<"$(notion_api GET "da
   QUERY=$(jq -n --arg ts "created_time" '{sorts: [{property: $ts, direction: "descending"}]}')
 fi
 echo "Fetching pages..."
-RESP=$(notion_api POST "databases/$DATA_SOURCE_ID/query" "$QUERY")
-if echo "$RESP" | jq -e '.error' > /dev/null; then
-  echo "$RESP" | jq '.error' >&2
-  exit 1
-fi
+RESULTS_TMP=$(mktemp)
+trap 'rm -f "$RESULTS_TMP"' EXIT
+CURSOR=""
+while :; do
+  if [ -z "$CURSOR" ]; then
+    QUERY_BODY="$QUERY"
+  else
+    QUERY_BODY=$(jq -n --argjson base "$QUERY" --arg c "$CURSOR" '$base + {start_cursor: $c}')
+  fi
+  RESP=$(notion_api POST "databases/$DATA_SOURCE_ID/query" "$QUERY_BODY")
+  if echo "$RESP" | jq -e '.error' > /dev/null; then
+    echo "$RESP" | jq '.error' >&2
+    exit 1
+  fi
+  echo "$RESP" | jq -c '.results' >> "$RESULTS_TMP"
+  CURSOR=$(echo "$RESP" | jq -r '.next_cursor // empty')
+  HAS_MORE=$(echo "$RESP" | jq -r '.has_more')
+  [ "$HAS_MORE" = "true" ] || break
+done
 printf "%-36s | %s | %s\n" "ID" "Title" "URL"
 echo "---------------------------------------------"
-echo "$RESP" | jq -r --arg titleProp "$TITLE_PROP" '.results[] | "\(.id) | \(.properties[$titleProp].title[0].text.content // "?") | \(.url)"' | while IFS='|' read -r id title url; do
+jq -s 'add' "$RESULTS_TMP" | jq -r --arg titleProp "$TITLE_PROP" '.[] | "\(.id) | \(.properties[$titleProp].title[0].text.content // "?") | \(.url)"' | while IFS='|' read -r id title url; do
   printf "%-36s | %s | %s\n" "$id" "$title" "$url"
 done
