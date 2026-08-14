@@ -17,6 +17,21 @@ date +%Y-%m-%d
 
 Treat the output as the authoritative "today" for the whole task: use it to pick the note path and to anchor every relative date below. Never rely on a date from memory or session start; when unsure whether today's note exists, verify with `obsidian vault="Obsidian" daily:path` before writing.
 
+## Recording Today's Diary
+
+When the user says 「记录今天的日记」/「记今天的日记」, confirm which calendar day "today" is BEFORE writing anything:
+
+1. Run `date +%Y-%m-%d` to get the system date.
+2. **Do not trust the system date alone.** The user's sense of 今天/昨天/前天 has been off from the system date by a full day or more. When the user's relative reference conflicts with existing diary files, **ask the user which calendar date they mean** rather than guessing.
+3. If the target date's file already exists, read it first to check for existing entries — 「继续记录」means append, not rewrite:
+
+   ```bash
+   obsidian vault="Obsidian" read path="diaries/YYYY-MM-DD.md"
+   ```
+
+   If it already contains entries that contradict the new content (different activities/people), **STOP and ask which date is correct**.
+4. Only after the date is confirmed, append or write to `diaries/YYYY-MM-DD.md`.
+
 ## Setup
 
 Requires Obsidian 1.12.7+ with **Command line interface** enabled (Settings → General). The app must be running; if it is not, the first command launches it.
