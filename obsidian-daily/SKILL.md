@@ -32,6 +32,28 @@ When the user says 「记录今天的日记」/「记今天的日记」, confirm
    If it already contains entries that contradict the new content (different activities/people), **STOP and ask which date is correct**.
 4. Only after the date is confirmed, append or write to `diaries/YYYY-MM-DD.md`.
 
+## Meals Table
+
+When recording today's diary, put a meals table at the **very beginning** of the note, before any other content. It is a table of everything the user **consumed** that day — food *and* drinks — one row per meal/drink, in chronological order:
+
+```markdown
+| 餐次 | 吃了什么 | 评价 |
+|------|----------|------|
+| 早餐 |          |      |
+| 午餐 |          |      |
+| 晚餐 |          |      |
+```
+
+- Rows are chronological: first row 早餐, second row 午餐, third row 晚餐.
+- If the user ate something outside the three main meals (加餐、下午茶、夜宵、零食…), add it as its **own row** inserted at the correct chronological position: something eaten between breakfast and lunch goes between those two rows; a 夜宵 goes after the 晚餐 row. Name the row by what it was (e.g. `| 夜宵 |`), keeping the three main meals labeled exactly 早餐/午餐/晚餐.
+- **Drinks count too.** Record anything the user drank (咖啡、奶茶、可乐、酒…) in the same table — either inside the matching meal's 「吃了什么」cell (e.g. `油条豆浆，配一杯美式`) or as its own chronologically-placed row when it stands alone (e.g. a single afternoon 奶茶). The table is "today's intake", not just three meals.
+- The third column 评价 records the user's opinion of that meal/item (taste, satisfaction, regrets) in their own words; leave it empty until they say something. When filling several items at once, ask for their verdict rather than inventing praise or complaints.
+- Ask what was eaten if the user mentions a meal without naming the food; never leave an unexplained blank except for meals that haven't happened yet.
+- Leave cells empty for main meals not yet eaten — the user may record them later in the day.
+- When the user mentions food while diary-recording, update the existing table rather than duplicating it.
+
+The CLI has no in-place edit command, so updating the table follows the read-edit-overwrite flow from **Update an Existing Note** below. A fresh note is created directly with the full table as `content`.
+
 ## Setup
 
 Requires Obsidian 1.12.7+ with **Command line interface** enabled (Settings → General). The app must be running; if it is not, the first command launches it.
