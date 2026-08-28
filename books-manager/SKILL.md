@@ -56,7 +56,7 @@ Ensure Notion API key is saved to `~/.config/notion/api_key` (Windows: `%USERPRO
 小说, 非小说, 自传, 传记, 推理, 幻想, 科幻, 历史, 爱情, 惊悚, 工具书, 诗歌, 画册, 冒险, 恐怖, 犯罪, 儿童, 经典, 哲学, 人类学, 政治, 畅销, 短篇集, 科普, 经济, 校园, 商业, 魔幻现实
 
 ### 阅读方式选项
-Kindle, iPad, 手机, 电脑, 纸质书
+电纸书阅读器, iPad, 手机, 电脑, 纸质书
 
 ### 个人评分选项
 - ⭐⭐⭐⭐⭐
@@ -193,7 +193,7 @@ const readingData = {
     "作者": { rich_text: [{ text: { content: "加西亚·马尔克斯" } }] },
     "状态": { status: { name: "想读" } },
     "类型": { multi_select: [{ name: "小说" }] },
-    "阅读方式": { multi_select: [{ name: "Kindle" }] },
+    "阅读方式": { multi_select: [{ name: "电纸书阅读器" }] },
     "总页数": { number: 360 }
   }
 };
@@ -264,7 +264,12 @@ DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ./notion-utils/scripts/create-page.
 ./notion-utils/scripts/get-page.sh <page_id>
 
 # 更新页面状态（multi_select 字段如 类型/阅读方式 直接传字符串数组即可，脚本自动转换）
-./notion-utils/scripts/update-page.sh <page_id> '{"状态":"已读完","阅读方式":["Kindle"]}'
+./notion-utils/scripts/update-page.sh <page_id> '{"状态":"已读完","阅读方式":["电纸书阅读器"]}'
+
+# 新建页面不支持写属性：create-page.sh 第 2 参数是正文纯文本（非属性 JSON），
+# 属性需创建后用 update-page.sh 写入
+DATABASE_ID=c71d68a42dba491aa04d682b43b1a93e ./notion-utils/scripts/create-page.sh "百年孤独"
+./notion-utils/scripts/update-page.sh <page_id> '{"作者":["加西亚·马尔克斯"],"状态":"想读","类型":["小说"]}'
 ```
 
-**注意**: 路径基于仓库根目录（脚本已从 `skills/` 子目录上移）；复杂更新建议把 JSON 写入文件再传入，避免转义问题。
+**注意**: 路径基于仓库根目录；复杂更新建议把 JSON 写入文件再传入，避免转义问题。
