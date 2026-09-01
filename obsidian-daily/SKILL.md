@@ -30,7 +30,16 @@ When the user says 「记录今天的日记」/「记今天的日记」, confirm
    ```
 
    If it already contains entries that contradict the new content (different activities/people), **STOP and ask which date is correct**.
-4. Only after the date is confirmed, append or write to `diaries/YYYY-MM-DD.md`.
+4. Only after the date is confirmed, append or write to `diaries/YYYY-MM-DD.md` — plain text and tables only, no headings (see Content Format below).
+
+## Content Format: No Headings
+
+Diary content is **plain text and tables only — never Markdown headings of any level.** Do not add:
+
+- an H1 date line such as `# 2026-09-01` (the filename already carries the date)
+- section headings such as `## 餐饮记录` or `## 日记`
+
+Entries are list lines appended chronologically (see Tags); separate groups with blank lines, and use plain Markdown tables where a table genuinely helps. This applies to every write path — `daily:append`, `append`, `create`, and full-file rewrites via `create ... overwrite`. Older notes may already contain headings: do not copy that pattern, and when rewriting a note keep old content as-is instead of restructuring it under new headings.
 
 ## Setup
 
@@ -120,7 +129,7 @@ obsidian vault="Obsidian" append path="diaries/2026-08-06.md" content="- SECOND_
 
 ### Update an Existing Note
 
-The CLI has no in-place edit command. To change an existing note (e.g. fix a mood tag), read its full content first, edit it, then rewrite the whole file with `overwrite`:
+The CLI has no in-place edit command. To change an existing note (e.g. fix a mood tag), read its full content first, edit it, then rewrite the whole file with `overwrite`. Keep the note's existing content and formatting untouched except for the intended edit — never introduce headings (see Content Format).
 
 ```bash
 obsidian vault="Obsidian" read path="diaries/2026-08-05.md"
