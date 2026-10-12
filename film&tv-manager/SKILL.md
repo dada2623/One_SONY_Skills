@@ -1,6 +1,6 @@
 ---
 name: film-tv-manager
-description: Manage your Notion media records database - track movies, TV shows, anime, and viewing habits. Use when user wants to add or manage film/TV records, track viewing progress, or search media via Douban/Trakt.tv.
+description: Manage your Notion media records database - track movies, TV shows, anime, and viewing habits. Use when user wants to add or manage film/TV records, track viewing progress, or search media via Douban.
 triggers:
   - 影视
   - 电影
@@ -39,10 +39,10 @@ Ensure Notion API key is saved to `~/.config/notion/api_key` (Windows: `%USERPRO
 | 个人评分 | select | 1-5星评分 |
 | 豆瓣评分 | number | 豆瓣评分 (0-10) |
 | 豆瓣网址 | url | 豆瓣链接 |
-| 观看方式 | multi_select | 观看方式 |
-| 观看次数 | number | 观看次数 |
-| 结束日期 | date | 看完日期 |
-| 创建时间 | created_time | 自动生成 |
+| 观看方式 | multi_select | 观看方式（整体覆盖，追加需先读原值合并，见下文） |
+| 观看次数 | number | 整数；默认值规则见下文 |
+| 结束日期 | date | 看完日期（YYYY-MM-DD） |
+| 创建时间 / 上次编辑时间 | created_time / last_edited_time | 只读，自动生成，不要在 payload 里传 |
 
 ### 状态选项
 - 想看
@@ -80,6 +80,7 @@ Ensure Notion API key is saved to `~/.config/notion/api_key` (Windows: `%USERPRO
 1. **严禁**在未查询数据库的情况下直接新建页面 —— 必须先查询数据库确认是否已存在同名影视，存在则更新而非新建
 2. **严禁**在未获取页面现有属性的情况下，询问用户是否要补充类型、导演、评分、观看方式等信息 —— 必须先 GET 页面属性，检查哪些字段已有值，只有字段确实为空时才可提示
 3. **严禁**更新页面时不先把现有信息列给用户看 —— 更新前必须先展示页面当前已有的所有字段值
+4. **严禁**更新 `观看方式`（multi_select）时不读原值直接传新值 —— multi_select 是整体覆盖，未列出的旧值会被抹掉；追加本次设备必须先 GET 原值合并传入
 
 ### ✅ 必须做
 1. 新建/更新影视前，**先查询数据库确认是否已存在同名影视**，存在则更新而非新建
@@ -88,7 +89,40 @@ Ensure Notion API key is saved to `~/.config/notion/api_key` (Windows: `%USERPRO
 4. 更新页面前，**先把页面里已经有的信息列给用户看**，确认后再操作
 5. 更新完成后，**检查「个人评分」「观看方式」等字段是否为空**，为空则提醒用户补全
 6. 豆瓣链接自动识别和评分获取继续保留（这是有用的）
-7. Trakt.tv 封面获取继续保留（用户未放弃此要求）
+7. 封面不需要自动获取：**不要**自动从 Trakt.tv、SteamGridDB 等网站取图写入页面，封面由用户手动添加
+
+---
+
+## 标准操作流程（四步，缺一不可）
+
+1. **查重**：按 `名称` 的 title contains 查询数据库，命中则走更新，未命中才新建。命中多条时人工核对全名（如「洛基 第一季」vs「洛基 第二季」），别把续季更新到同一页
+2. **读现状**：GET 页面属性，把已有字段值逐条列给用户看，并确认每个字段的 type
+3. **构造 payload 并落库**：写入临时 JSON 文件（避免 shell 转义），用 `update-page.sh` 更新
+4. **回读验证 + 收尾**：PATCH 的响应体本身就是更新后的完整属性，可直接核对关键字段；检查 `个人评分`、`观看方式` 等是否为空，空则提醒用户补全
+
+### 查重命令示例
+
+```bash
+cd ~/.cc-switch/skills/notion-utils
+DB=8ad61aac3afd4101862e50986e36b9bc
+
+API_KEY=$(cat ~/.config/notion/api_key)
+curl -s -X POST "https://api.notion.com/v1/databases/$DB/query" \
+  -H "Authorization: Bearer $API_KEY" -H "Notion-Version: 2022-06-28" \
+  -H "Content-Type: application/json" \
+  -d '{"filter":{"property":"名称","title":{"contains":"洛基"}},"page_size":20}' | jq -r \
+  '.results[] | [.id, (.properties.名称.title[0].plain_text // "")] | @tsv'
+```
+
+## 场景 → 标准动作
+
+| 场景 | 必须做的改动 |
+|------|--------------|
+| 首次记录 | 查重 → 建页（只写 title）→ `update-page.sh` 补齐其余字段 |
+| 重看一遍 | 观看次数 **+1**；结束日期 → 今天；状态保持 `看过`；观看方式**追加**本次设备（先读原值合并，不是替换） |
+| 补全空字段 | 先 GET 看哪些为空，只补空值，已有值不动 |
+| 改评分 | 只改 `个人评分`（1–5 星），不改豆瓣评分 |
+| 状态推进 | 想看 → 在看 → 看过；同步观看次数默认值 |
 
 ---
 
@@ -147,86 +181,8 @@ const mediaData = {
 
 ---
 
-### 影视封面获取规则（Trakt.tv）
-当用户添加影视记录时，应自动从 Trakt.tv 搜索并获取电影/剧集封面图片，然后嵌入到 Notion 页面中。
-
-#### 操作步骤
-1. **访问 Trakt.tv 搜索页面**
-   - 打开 `https://app.trakt.tv/`
-   - 使用搜索功能，输入影视名称进行搜索
-
-2. **搜索并选择正确结果**
-   - 在搜索结果中找到匹配的电影或剧集
-   - 点击进入详情页获取封面图片 URL
-
-3. **获取封面图片 URL**
-   - 封面图片通常位于详情页的海报/封面区域
-   - 提取图片的直接链接（确保是高质量图片）
-
-4. **嵌入封面到 Notion 页面**
-   - 创建 Notion 页面后，使用 Notion API 添加图片块
-   - 将封面图片作为外部图片嵌入
-
-#### Notion API 添加图片块示例
-```javascript
-// 创建页面后，添加封面图片块
-const pageId = "新创建的页面ID";
-const coverImageUrl = "https://example.com/movie-poster.jpg";
-
-// 添加图片块到页面内容
-const imageBlock = {
-  object: "block",
-  type: "image",
-  image: {
-    type: "external",
-    external: {
-      url: coverImageUrl
-    }
-  }
-};
-
-// PATCH /v1/blocks/{page_id}/children
-fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
-  method: 'PATCH',
-  headers: {
-    'Authorization': `Bearer ${NOTION_API_KEY}`,
-    'Notion-Version': '2022-06-28',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    children: [imageBlock]
-  })
-});
-```
-
-#### 完整流程示例
-```javascript
-// 用户说"添加电影「奥本海默」，已看过"
-// 1. 先在 Trakt.tv 搜索 "Oppenheimer"
-// 2. 找到电影详情页，获取封面图片 URL
-// 3. 创建 Notion 页面
-// 4. 添加图片块到页面内容
-
-// 步骤1: 创建页面
-const pageData = {
-  parent: { database_id: '8ad61aac3afd4101862e50986e36b9bc' },
-  properties: {
-    "名称": { title: [{ text: { content: "奥本海默" } }] },
-    "类别": { select: { name: "海外电影" } },
-    "进行状态": { status: { name: "看过" } },
-    "观看次数": { number: 1 }
-  }
-};
-
-// 步骤2: 创建页面后，添加封面图片块
-const coverImageUrl = "https://walter.trakt.tv/images/movies/poster.jpg";
-// 使用 PATCH /v1/blocks/{page_id}/children 添加图片块
-```
-
-#### 注意事项
-- Trakt.tv 搜索时使用英文原名可能获得更准确的结果
-- 如果找不到封面，可以跳过此步骤，不影响页面创建
-- 确保图片 URL 是可公开访问的直接链接
+### 封面规则
+不需要自动获取封面：**不要**自动从 Trakt.tv、SteamGridDB 等网站取图写入页面，封面由用户手动添加。
 
 ---
 
@@ -275,6 +231,10 @@ const updateData = {
 
 **注意**：Notion API 要求 multi_select 传**对象数组** `[{"name": "电视"}]`，不能传字符串数组 `["电视"]`。使用 `update-page.sh` 时直接传 `{"观看方式": ["电视"]}` 即可，脚本会自动完成转换。
 
+**⚠️ multi_select 是整体覆盖**：传 `["电视", "投影"]` 会把未列出的旧值**全部抹掉**。追加观看方式时必须先 GET 原值、合并后一起传（如原为 `显示器`，本次又用了电视 → 传 `["显示器", "电视"]`）。
+
+**省略 key = 不修改，不是清空**：`update-page.sh` 只提交 payload 里出现的字段，无法靠省略把字段改空；要清空需显式传空值。
+
 ---
 
 ## API 使用说明
@@ -287,6 +247,8 @@ const updateData = {
   'Content-Type': 'application/json'
 }
 ```
+
+**`Notion-Version` 固定用 `2022-06-28`**（`common.sh` 已内置），不要手改成其他版本——如 `2024-02-28` 会被 API 拒绝并返回允许值清单。
 
 ### 常用端点
 - 创建页面: `POST /v1/pages`
@@ -313,26 +275,45 @@ const updateData = {
 
 ## Scripts
 
-通用脚本位于 `notion-utils` skill（仓库根目录），请使用以下方式调用：
+通用脚本位于 `notion-utils` skill。安装后目录为 `~/.cc-switch/skills/notion-utils/scripts/`（源仓库中为仓库根目录下 `notion-utils/scripts/`）。
+
+**一律用 `bash` 调用**：安装副本的脚本权限常为 `644`，直接 `./scripts/xxx.sh` 会报 `Permission denied`。
 
 ```bash
-# 列出影视记录数据库的所有页面
-DATABASE_ID=8ad61aac3afd4101862e50986e36b9bc ./notion-utils/scripts/list-pages.sh
+cd ~/.cc-switch/skills/notion-utils
+DB=8ad61aac3afd4101862e50986e36b9bc
 
-# 在影视记录数据库创建页面
-DATABASE_ID=8ad61aac3afd4101862e50986e36b9bc ./notion-utils/scripts/create-page.sh "奥本海默"
+# 列出影视记录数据库的所有页面
+DATABASE_ID=$DB bash ./scripts/list-pages.sh
+
+# 在影视记录数据库创建页面（两段式第一步：只写 title）
+DATABASE_ID=$DB bash ./scripts/create-page.sh "洛基 第一季 Loki Season 1"
 
 # 读取页面属性与内容
-./notion-utils/scripts/get-page.sh <page_id>
+bash ./scripts/get-page.sh <page_id>
 
-# 更新页面状态（内联 JSON；multi_select 传字符串数组即可，脚本自动转换）
-./notion-utils/scripts/update-page.sh <page_id> '{"进行状态":"看过","观看方式":["电视"]}'
-
-# 更新页面（推荐：使用 JSON 文件，避免 shell 转义问题）
+# 更新页面（推荐：JSON 文件方式，避免 shell 转义；multi_select 传字符串数组即可，脚本自动转换）
 cat > /tmp/updates.json <<'EOF'
-{"进行状态":"看过","观看方式":["电视"],"个人评分":"⭐⭐⭐⭐","观看次数":1,"结束日期":"2026-08-06"}
+{"进行状态":"看过","观看方式":["显示器","电视"],"个人评分":"⭐⭐⭐⭐","观看次数":1,"结束日期":"2026-08-06"}
 EOF
-./notion-utils/scripts/update-page.sh <page_id> /tmp/updates.json
+bash ./scripts/update-page.sh <page_id> /tmp/updates.json
 ```
 
-**注意**: 路径基于仓库根目录（脚本已从 `skills/` 子目录上移到根目录）。
+**新建时的两段式**：`create-page.sh` 只写 title，其余字段（类别、状态、导演、类型、评分、观看方式、观看次数、结束日期）要紧接着跑一次 `update-page.sh` 补齐。
+
+**省略 key = 不修改，不是清空**：`update-page.sh` 只提交 payload 里出现的字段；无法靠省略把字段改空，要清空需显式传空值。
+
+**回读验证**：`update-page.sh` 成功后打印的 PATCH 响应体就是更新后的完整属性，可直接当回读证据核对。
+
+---
+
+## 完成前校验清单
+
+- [ ] 库里没有重复页（同片同季只有一条）
+- [ ] `名称` 是豆瓣 h1 全名（中文 + 空格 + 英文原名）
+- [ ] `观看次数` 与 `进行状态` 符合默认值规则（重看已 +1）
+- [ ] `结束日期` = 实际看完当天（YYYY-MM-DD）
+- [ ] `观看方式` 保留了历史值，本次设备已追加
+- [ ] `类别` / `类型` 用的是库里已有选项，没有新造选项
+- [ ] 写后回读确认落库成功
+- [ ] 空字段（个人评分、观看方式等）已提醒用户补全
