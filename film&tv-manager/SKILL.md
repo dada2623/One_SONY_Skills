@@ -215,6 +215,8 @@ const mediaData = {
 };
 ```
 
+**注意**：上面是**直接调 API** 的写法（一次 `POST /v1/pages` 可带多个属性）。用 `notion-utils` 脚本时仍走**两段式**：`create-page.sh` 只写 title，类别/状态/导演/类型/评分/观看次数/日期紧接着用 `update-page.sh` 补齐（见下文「Scripts」），不要把多属性 payload 塞给 `create-page.sh`。
+
 ---
 
 ## 更新状态示例
