@@ -17,9 +17,10 @@ tools_required:
 ## 脚本位置
 
 - 源仓库：`./notion-utils/scripts/`（仓库根目录下）
-- 安装后：`~/.cc-switch/skills/notion-utils/scripts/`
+- 安装后（DSH）：`${DSH_HOME:-$HOME/.dsh}/skills/notion-utils/scripts/`
+- 不要用 `~/.cc-switch/skills/notion-utils/`：那是另一份独立副本，改了不会回到本仓库
 
-**一律用 `bash ./scripts/xxx.sh` 调用**：安装副本的脚本权限常为 `644`，直接 `./scripts/xxx.sh` 会报 `Permission denied`。
+**一律用 `bash ./scripts/xxx.sh` 调用**：即使副本带可执行位，用 `bash` 调用也最稳；若遇到 `Permission denied`（某些安装副本权限为 `644`），先跑一次 `chmod +x scripts/*.sh` 再继续。
 
 ## 常用脚本列表
 
@@ -74,4 +75,4 @@ EOF
 bash ./notion-utils/scripts/update-page.sh <page_id> /tmp/updates.json
 ```
 
-**注意**: 路径基于仓库根目录（脚本已从 `skills/` 子目录上移到根目录）；安装副本位于 `~/.cc-switch/skills/notion-utils/`。
+**注意**: 路径基于仓库根目录（脚本已从 `skills/` 子目录上移到根目录）；DSH 安装副本位于 `${DSH_HOME:-$HOME/.dsh}/skills/notion-utils/`（软链到本仓库时即上述路径）。
