@@ -1,6 +1,6 @@
 ---
 name: film-tv-manager
-description: Manage your Notion media records database - track movies, TV shows, anime, and viewing habits. Use when user wants to add or manage film/TV records, track viewing progress, or search media via Douban.
+description: Manage your Notion media records database - track movies, TV shows, anime, and viewing habits. Use when user wants to add or manage film/TV records, track viewing progress, or search media via Douban. Includes the Douban-page extraction rules (browser render, wait 2-3s, strip year/更多...) and the two-stage create-then-update write flow.
 triggers:
   - 影视
   - 电影
@@ -103,7 +103,8 @@ Ensure Notion API key is saved to `~/.config/notion/api_key` (Windows: `%USERPRO
 ### 查重命令示例
 
 ```bash
-cd ~/.cc-switch/skills/notion-utils
+SCRIPT_DIR="${DSH_HOME:-$HOME/.dsh}/skills/notion-utils"
+cd "$SCRIPT_DIR"
 DB=8ad61aac3afd4101862e50986e36b9bc
 
 API_KEY=$(cat ~/.config/notion/api_key)
@@ -129,9 +130,16 @@ curl -s -X POST "https://api.notion.com/v1/databases/$DB/query" \
 ## 新建影视规则
 
 ### 名称格式规则
-- 影视名称**使用豆瓣网页上显示的标题**（页面 h1 标题，通常是「中文名 + 空格 + 英文原名」），作为数据库主键
-- 示例：豆瓣网页显示 `蜘蛛侠：崭新之日 Spider-Man: Brand New Day`，则名称填 `蜘蛛侠：崭新之日 Spider-Man: Brand New Day`
-- 豆瓣 API 的 `title` 字段只是中文名，**不要**用它替代网页显示标题
+- 影视名称**使用豆瓣网页上显示的标题**（`h1` 去掉 `span.year` 年份徽标，通常是「中文名 + 空格 + 英文原名」），作为数据库主键
+- 示例：豆瓣 `h1` 显示 `蜘蛛侠：崭新之日 Spider-Man: Brand New Day (2026)`，其中 `(2026)` 在 `span.year` 里 → 名称填 `蜘蛛侠：崭新之日 Spider-Man: Brand New Day`
+- 豆瓣 API 的 `title` 字段只是中文名（不带外文原名），**不要**用它替代网页显示标题
+- 渲染后读空时**不要**猜名称、也不要判定条目不存在：重读一次，仍为空才回报渲染失败
+
+### 导演字段规则
+- 只取豆瓣 `#info` 里**可见**的导演姓名，多位用 `、` 连接
+- **去掉**末尾的「更多...」和任何占位省略号；不要把 `/` 直接留在字段里
+- 示例：豆瓣显示 `导演: 佐藤卓哉 / 滨崎博嗣 / 小林智树 / 立川让 / 小泽一浩 / 更多...` → 存 `佐藤卓哉、滨崎博嗣、小林智树、立川让、小泽一浩`
+- 若发现库里旧条目是本规则之前的脏数据（`/` 分隔 + 「更多...」尾巴），顺手按本规则改正
 
 ### 询问缺失信息
 当用户新建影视记录时，如果用户没有提供以下必要信息，应主动向用户询问：
@@ -146,26 +154,34 @@ curl -s -X POST "https://api.notion.com/v1/databases/$DB/query" \
 - 进行状态为"已速看"或"看过"时：观看次数 = 1
 
 ### 豆瓣链接自动识别规则
-当用户提供豆瓣电影链接（如 `https://movie.douban.com/subject/xxxxx`）时，应自动从页面提取以下信息：
+当用户提供豆瓣电影链接（如 `https://movie.douban.com/subject/xxxxx`）时，应自动从页面提取以下信息。
 
-- **名称**：页面标题中的影视名称
-- **导演**：导演信息（如"导演: 亚伦·霍瓦斯 / 迈克尔·杰勒尼克"）
-  - 多位导演用 `/` 分隔，提取所有导演姓名
+#### 取数方式（重要：只认浏览器渲染后的 DOM）
+豆瓣的 `h1`、`#info`、`[property="v:average"]` 都是前端渲染出来的，**页面打开瞬间读是空的**。
+
+- **必须**用浏览器加载 `https://movie.douban.com/subject/<id>/`，**等 2–3 秒**渲染完成后再读 DOM
+- 读到的值为空（如 `NO_H1`、评分空串、`#info` 只有「载入中…」）时，**重读一次**再判定
+- **不要把 `web_extract` / 服务端抓取当取数入口**：桌面页和 `m.douban.com` 移动页都只会返回「载入中…」，拿不到真实数据
+- 一次读空**不等于**条目不存在、更不允许凭猜写名称；只有重读仍为空才回报「页面未能渲染」并让用户确认链接或稍后重试
+
+- **名称**：页面 `h1` 文本，**去掉 `span.year`**（年份徽标），剩下的才是「中文名 + 空格 + 外文原名」
+- **导演**：`#info` 里的导演信息（如"导演: 亚伦·霍瓦斯 / 迈克尔·杰勒尼克"）
+  - 多位导演用 `/` 分隔，只取可见姓名，**去掉末尾「更多...」**
   - 存储格式：将多位导演用 `、` 连接存入 rich_text 字段
 - **类型**：类型标签（如"喜剧 / 爱情 / 科幻"）
   - 按 `/` 分隔，去除首尾空格
   - 匹配已有的类型选项
-- **豆瓣评分**：页面上的评分数字
+- **豆瓣评分**：`[property="v:average"]` 的数字
 - **豆瓣网址**：用户提供的豆瓣链接
 
 #### 示例：从豆瓣提取数据后创建记录
 ```javascript
 // 用户说"我看过这个 https://movie.douban.com/subject/25845392/"
-// 页面显示：超级马里奥兄弟大电影，导演: 亚伦·霍瓦斯 / 迈克尔·杰勒尼克，类型: 喜剧 / 爱情 / 科幻 / 动画 / 奇幻 / 冒险，评分: 7.8
+// 页面显示：超级马里奥兄弟大电影 The Super Mario Bros. Movie (2023)，导演: 亚伦·霍瓦斯 / 迈克尔·杰勒尼克，类型: 喜剧 / 爱情 / 科幻 / 动画 / 奇幻 / 冒险，评分: 7.8
 const mediaData = {
   parent: { database_id: '8ad61aac3afd4101862e50986e36b9bc' },
   properties: {
-    "名称": { title: [{ text: { content: "超级马里奥兄弟大电影" } }] },
+    "名称": { title: [{ text: { content: "超级马里奥兄弟大电影 The Super Mario Bros. Movie" } }] },
     "导演": { rich_text: [{ text: { content: "亚伦·霍瓦斯、迈克尔·杰勒尼克" } }] },
     "类型": { multi_select: [
       { name: "喜剧" }, { name: "爱情" }, { name: "科幻" },
@@ -275,12 +291,13 @@ const updateData = {
 
 ## Scripts
 
-通用脚本位于 `notion-utils` skill。安装后目录为 `~/.cc-switch/skills/notion-utils/scripts/`（源仓库中为仓库根目录下 `notion-utils/scripts/`）。
+通用脚本位于 `notion-utils` skill。DSH 环境下目录为 `~/.dsh/skills/notion-utils/scripts/`（可用 `DSH_HOME` 覆盖根目录）；源仓库中为仓库根目录下 `notion-utils/scripts/`。
 
-**一律用 `bash` 调用**：安装副本的脚本权限常为 `644`，直接 `./scripts/xxx.sh` 会报 `Permission denied`。
+**一律用 `bash ./scripts/xxx.sh` 调用**：即使副本带可执行位，用 `bash` 调用也最稳；若遇到 `Permission denied`（某些安装副本权限为 `644`），先跑一次 `chmod +x scripts/*.sh` 再继续。
 
 ```bash
-cd ~/.cc-switch/skills/notion-utils
+SCRIPT_DIR="${DSH_HOME:-$HOME/.dsh}/skills/notion-utils"
+cd "$SCRIPT_DIR"
 DB=8ad61aac3afd4101862e50986e36b9bc
 
 # 列出影视记录数据库的所有页面
@@ -310,7 +327,10 @@ bash ./scripts/update-page.sh <page_id> /tmp/updates.json
 ## 完成前校验清单
 
 - [ ] 库里没有重复页（同片同季只有一条）
-- [ ] `名称` 是豆瓣 h1 全名（中文 + 空格 + 英文原名）
+- [ ] `名称` 是豆瓣 h1 全名（中文 + 空格 + 英文原名），已去掉 `span.year` 年份、没有用 API 的纯中文 title
+- [ ] `导演` 用 `、` 连接、已去掉「更多...」，没有残留 `/` 分隔
+- [ ] 豆瓣数据来自浏览器渲染后的 DOM（等待 2–3 秒），不是 `web_extract` 的「载入中…」
+- [ ] 新建走完了两段式：`create-page.sh` 写 title 后紧接 `update-page.sh` 补齐其余字段
 - [ ] `观看次数` 与 `进行状态` 符合默认值规则（重看已 +1）
 - [ ] `结束日期` = 实际看完当天（YYYY-MM-DD）
 - [ ] `观看方式` 保留了历史值，本次设备已追加
