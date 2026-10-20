@@ -9,12 +9,12 @@ description: 管理家庭影音流水线：PT 下载、阿里云盘中转待看�
 
 主机与账号见 `~/.ssh/config`，设备与站点命名以 `~/.dsh/network/devices.md` 为准。**不要在 skill 或脚本里写死密码。**
 
-站点代号只有两个，本 skill 不写地名：
+站点代号：
 
 - **SandY** = `192.168.50.0/24`：`sandy-nas-fnos`（飞牛，跑 Transmission）、`sandy-nas-truenas`（TrueNAS，仅经 CIFS 访问）、`vaio-deskstation-2023`（Mac mini）
 - **租房** = `192.168.5.0/24`：`sony-memini-fnos`（飞牛，接收待看）、`vaio-deskstation-2024`（Mac mini，当前执行端）
 
-路径（均已核实存在）：
+常用路径：
 
 | 用途 | 主机 | 路径 |
 |---|---|---|
