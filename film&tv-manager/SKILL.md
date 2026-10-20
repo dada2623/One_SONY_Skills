@@ -130,13 +130,16 @@ curl -s -X POST "https://api.notion.com/v1/databases/$DB/query" \
 ## 新建影视规则
 
 ### 名称格式规则
-- 影视名称**使用豆瓣网页上显示的标题**（`h1` 去掉 `span.year` 年份徽标，通常是「中文名 + 空格 + 英文原名」），作为数据库主键
-- 示例：豆瓣 `h1` 显示 `蜘蛛侠：崭新之日 Spider-Man: Brand New Day (2026)`，其中 `(2026)` 在 `span.year` 里 → 名称填 `蜘蛛侠：崭新之日 Spider-Man: Brand New Day`
-- 豆瓣 API 的 `title` 字段只是中文名（不带外文原名），**不要**用它替代网页显示标题
-- 渲染后读空时**不要**猜名称、也不要判定条目不存在：重读一次，仍为空才回报渲染失败
+- 影视名称 = 豆瓣「中文名 + 空格 + 外文原名」，作为数据库主键
+- 走 `douban movie <id> --json` 时：`title` + 空格 + `original_title`，如 `肖申克的救赎 The Shawshank Redemption`，**不带年份**
+- `original_title` 为空时（国产片常见，如 `长津湖`、`霸王别姬`）**只写 `title`**，不要拼出尾随空格
+- 退回读 DOM 时：`h1` 去掉 `span.year`，如 `蜘蛛侠：崭新之日 Spider-Man: Brand New Day (2026)` → 名称填 `蜘蛛侠：崭新之日 Spider-Man: Brand New Day`
+- 豆瓣 API 的 `title` 字段只是中文名（不带外文原名），**不要**单独拿它当名称
+- 取数失败或读空时**不要**猜名称、也不要判定条目不存在：重试一次，仍失败再回报
 
 ### 导演字段规则
-- 只取豆瓣 `#info` 里**可见**的导演姓名，多位用 `、` 连接
+- 首选直接取 `douban movie <id> --json` 的 `directors` 数组，多位用 `、` 连接（CLI 已去「更多...」，无需清洗）
+- 只有退回读 DOM 时，才从 `#info` 里**可见**的导演姓名手工提取
 - **去掉**末尾的「更多...」和任何占位省略号；不要把 `/` 直接留在字段里
 - 示例：豆瓣显示 `导演: 佐藤卓哉 / 滨崎博嗣 / 小林智树 / 立川让 / 小泽一浩 / 更多...` → 存 `佐藤卓哉、滨崎博嗣、小林智树、立川让、小泽一浩`
 - 若发现库里旧条目是本规则之前的脏数据（`/` 分隔 + 「更多...」尾巴），顺手按本规则改正
@@ -154,41 +157,61 @@ curl -s -X POST "https://api.notion.com/v1/databases/$DB/query" \
 - 进行状态为"已速看"或"看过"时：观看次数 = 1
 
 ### 豆瓣链接自动识别规则
-当用户提供豆瓣电影链接（如 `https://movie.douban.com/subject/xxxxx`）时，应自动从页面提取以下信息。
+当用户提供豆瓣电影链接（如 `https://movie.douban.com/subject/xxxxx`）或片名时，应自动取以下信息（首选 `douban`，见下）。
 
-#### 取数方式（重要：只认浏览器渲染后的 DOM）
-豆瓣的 `h1`、`#info`、`[property="v:average"]` 都是前端渲染出来的，**页面打开瞬间读是空的**。
+#### 取数方式（首选 douban-cli，浏览器渲染只作兜底）
 
-- **必须**用浏览器加载 `https://movie.douban.com/subject/<id>/`，**等 2–3 秒**渲染完成后再读 DOM
-- 读到的值为空（如 `NO_H1`、评分空串、`#info` 只有「载入中…」）时，**重读一次**再判定
-- **不要把 `web_extract` / 服务端抓取当取数入口**：桌面页和 `m.douban.com` 移动页都只会返回「载入中…」，拿不到真实数据
-- 一次读空**不等于**条目不存在、更不允许凭猜写名称；只有重读仍为空才回报「页面未能渲染」并让用户确认链接或稍后重试
+用 `douban`（npm 包 `@marvae24/douban-cli`）直接取结构化数据，**不用登录、不用等渲染**：
 
-- **名称**：页面 `h1` 文本，**去掉 `span.year`**（年份徽标），剩下的才是「中文名 + 空格 + 外文原名」
-- **导演**：`#info` 里的导演信息（如"导演: 亚伦·霍瓦斯 / 迈克尔·杰勒尼克"）
-  - 多位导演用 `/` 分隔，只取可见姓名，**去掉末尾「更多...」**
-  - 存储格式：将多位导演用 `、` 连接存入 rich_text 字段
-- **类型**：类型标签（如"喜剧 / 爱情 / 科幻"）
-  - 按 `/` 分隔，去除首尾空格
-  - 匹配已有的类型选项
-- **豆瓣评分**：`[property="v:average"]` 的数字
-- **豆瓣网址**：用户提供的豆瓣链接
+```bash
+# 只装一次；已有就跳过
+command -v douban >/dev/null || npm install -g @marvae24/douban-cli
+
+# CLI 不接受 URL，先从链接里抠数字 ID
+ID=$(printf '%s' "$URL" | sed -E 's#.*/subject/([0-9]+).*#\1#')
+douban movie "$ID" --json > /tmp/douban.json
+jq -e '.ok != false' /tmp/douban.json   # 成功时才继续往下用
+```
+
+- `--json` 的 stdout 是**纯 JSON**，可直接 `jq`；失败时输出 `{"ok":false,"error":{...}}`、退出码 1
+- 也能按片名查（`douban movie 沙丘 --json`，会先打印「已匹配为: 沙丘 Dune (3001114)」），但**优先用 ID**，避免同名/续集串味
+- **兜底**：CLI 不可用或返回异常时，才退回浏览器加载 `https://movie.douban.com/subject/<id>/`、**等 2–3 秒**读 DOM；`web_extract` 与 `m.douban.com` 仍只返回「载入中…」，不要用来取数
+- 取数失败**不等于**条目不存在，更不允许凭猜写名称；重试一次仍失败就回报并让用户确认链接
+
+#### 字段映射（`--json` → Notion）
+
+| Notion 字段 | 取值 |
+|---|---|
+| 名称 | `title` + 空格 + `original_title`（`title` 只有中文名，**不带年份**；`original_title` 为空就只写 `title`） |
+| 导演 | `directors` 数组用 `、` 连接（CLI 已去掉「更多...」，没有 `/`） |
+| 类型 | `genres` 逐个匹配库内已有选项 |
+| 豆瓣评分 | `rating`（字符串 → number） |
+| 豆瓣网址 | `url`（或用户给的链接） |
+
+实测：
+
+```bash
+$ douban movie 1292052 --json | jq -c '{title, original_title, year, rating, directors, url}'
+{"title":"肖申克的救赎","original_title":"The Shawshank Redemption","year":"1994","rating":"9.7","directors":["弗兰克·德拉邦特"],"url":"https://movie.douban.com/subject/1292052/"}
+```
 
 #### 示例：从豆瓣提取数据后创建记录
 ```javascript
-// 用户说"我看过这个 https://movie.douban.com/subject/25845392/"
-// 页面显示：超级马里奥兄弟大电影 The Super Mario Bros. Movie (2023)，导演: 亚伦·霍瓦斯 / 迈克尔·杰勒尼克，类型: 喜剧 / 爱情 / 科幻 / 动画 / 奇幻 / 冒险，评分: 7.8
+// 用户说"我看过这个 https://movie.douban.com/subject/27199894/"
+// douban movie 27199894 --json →
+//   title=超级马力欧兄弟大电影（豆瓣正式译名是「马力欧」，不是「马里奥」）
+//   original_title=The Super Mario Bros. Movie
+//   directors=[亚伦·霍瓦斯, 迈克尔·杰勒尼克], genres=[喜剧,动画,奇幻], rating=7.7
 const mediaData = {
   parent: { database_id: '8ad61aac3afd4101862e50986e36b9bc' },
   properties: {
-    "名称": { title: [{ text: { content: "超级马里奥兄弟大电影 The Super Mario Bros. Movie" } }] },
+    "名称": { title: [{ text: { content: "超级马力欧兄弟大电影 The Super Mario Bros. Movie" } }] },
     "导演": { rich_text: [{ text: { content: "亚伦·霍瓦斯、迈克尔·杰勒尼克" } }] },
     "类型": { multi_select: [
-      { name: "喜剧" }, { name: "爱情" }, { name: "科幻" },
-      { name: "动画" }, { name: "奇幻" }, { name: "冒险" }
+      { name: "喜剧" }, { name: "动画" }, { name: "奇幻" }
     ]},
-    "豆瓣评分": { number: 7.8 },
-    "豆瓣网址": { url: "https://movie.douban.com/subject/25845392/" },
+    "豆瓣评分": { number: 7.7 },
+    "豆瓣网址": { url: "https://movie.douban.com/subject/27199894/" },
     "进行状态": { status: { name: "看过" } },
     "观看次数": { number: 1 }
   }
@@ -293,6 +316,8 @@ const updateData = {
 
 ## Scripts
 
+**两套工具各管一段**：豆瓣取数用 `douban`（`@marvae24/douban-cli`，见上文「取数方式」），Notion 写入用 `notion-utils` 脚本。`douban` 只读命令无需登录；`mark/rate/comment` 等写操作才需要 `douban login`（本 skill 用不到）。
+
 通用脚本位于 `notion-utils` skill。DSH 环境下目录为 `~/.dsh/skills/notion-utils/scripts/`（可用 `DSH_HOME` 覆盖根目录）；源仓库中为仓库根目录下 `notion-utils/scripts/`。
 
 **一律用 `bash ./scripts/xxx.sh` 调用**：即使副本带可执行位，用 `bash` 调用也最稳；若遇到 `Permission denied`（某些安装副本权限为 `644`），先跑一次 `chmod +x scripts/*.sh` 再继续。
@@ -329,9 +354,10 @@ bash ./scripts/update-page.sh <page_id> /tmp/updates.json
 ## 完成前校验清单
 
 - [ ] 库里没有重复页（同片同季只有一条）
-- [ ] `名称` 是豆瓣 h1 全名（中文 + 空格 + 英文原名），已去掉 `span.year` 年份、没有用 API 的纯中文 title
-- [ ] `导演` 用 `、` 连接、已去掉「更多...」，没有残留 `/` 分隔
-- [ ] 豆瓣数据来自浏览器渲染后的 DOM（等待 2–3 秒），不是 `web_extract` 的「载入中…」
+- [ ] `名称` = `title` + 空格 + `original_title`（为空则只写 `title`），没有年份、没有单独用纯中文 `title`、没有尾随空格
+- [ ] `导演` 用 `、` 连接、没有「更多...」、没有残留 `/`（`douban --json` 的 `directors` 本身就是干净的）
+- [ ] 豆瓣数据来自 `douban movie <id> --json`（失败才用浏览器渲染兜底），没有用 `web_extract` 的「载入中…」
+- [ ] `--json` 返回里没有 `.ok == false`（出错时退出码 1、stdout 是错误对象，别当数据用）
 - [ ] 新建走完了两段式：`create-page.sh` 写 title 后紧接 `update-page.sh` 补齐其余字段
 - [ ] `观看次数` 与 `进行状态` 符合默认值规则（重看已 +1）
 - [ ] `结束日期` = 实际看完当天（YYYY-MM-DD）
