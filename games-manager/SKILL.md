@@ -37,23 +37,19 @@ Ensure Notion API key is saved to `~/.config/notion/api_key` (Windows: `%USERPRO
 | 状态 | status | 游玩状态 |
 | 个人评分 | select | 1-5星评分 |
 | MC 评分 | number | Metacritic 评分 |
-| MC 网址 | url | Metacritic 链接 |
+| MC网址 | url | Metacritic 链接（**字段名无空格**） |
 | 游戏时间 | number | 游玩时长（小时） |
 | 最后运行日期 | date | 最后一次运行游戏的日期 |
 | 创建时间 | created_time | 自动生成 |
 
 ### 状态选项
-- 未开始
-- 想玩
-- 在玩
-- 已通关
-- 弃坑
+想玩, 在云, 在玩, 完美通关, 无需通关, 已通关, 已云完, 放弃
 
 ### 平台选项
-PC_STEAM, PC, PC_XBOX, PC_GOG, PC_Epic, PC_模拟器, PC_学习版, PC_BattleNet, PC_Uplay, PC_EA Play, PS5, PS4, XBOX, Switch, Mac, iOS, Apple TV, 云游戏
+iOS, Android, Switch, Mac, PS4, PS5, 云游戏, Apple TV, XBOX, PC, PC_学习版, PC_模拟器, PC_XBOX, PC_STEAM, PC_GOG, PC_Uplay, PC_BattleNet, PC_EA Play, PC_Epic
 
 ### 类型选项
-体感, 休闲, 平台跳跃, 合作, 探索, 冒险, 肉鸽, 生存, 动作, MOBA, 开放世界, 银河恶魔城, 竞速, 策略, RPG, 模拟, 射击, 剧情, 格斗, 对战, 机甲, 运动, 恐怖, 解谜, 音乐, Galgame, 回合制, MMO, 派对, 塔防, 卡牌/棋盘, 共斗, 狼人杀, 种田
+体感, 休闲, 平台跳跃, 合作, 探索, 冒险, 肉鸽, 生存, 动作, MOBA, 开放世界, 银河恶魔城, 竞速, 策略, RPG, 模拟, 射击, 剧情, 格斗, 对战, 机甲, 运动, 恐怖, 解谜, 音乐, Galgame, 回合制, MMO, 派对, 塔防, 卡牌/棋盘, 共斗, 狼人杀, 种田, FPS
 
 ### 个人评分选项
 - ⭐⭐⭐⭐⭐
@@ -130,6 +126,15 @@ PC_STEAM, PC, PC_XBOX, PC_GOG, PC_Epic, PC_模拟器, PC_学习版, PC_BattleNet
 3. **获取数据**
    - **MC 评分**：页面上的 Metascore 数字
    - **MC 网址**：游戏详情页的完整 URL
+   - **多平台必须问用户**：同一游戏在 Metacritic 上按平台分开打分（例：PC 88 / PS5 87）。页面顶部的 Metascore 是默认平台的分，"All Platforms" 区块列出其余平台分。记哪个由用户定，不要自己挑最高分。
+
+### 游戏名命名规则
+
+**游戏名 = 官方中文名 + 空格 + 英文原名**（与影视记录同一约定）。中文名以官方中文页面为准（PlayStation 中文站、Steam 中文页、开发商官网），不要凭音译或直译猜——例如 Phantom Blade Zero 的官方中文名是「影之刃零」。
+
+### 查重要多角度搜
+
+同一个关键词搜两遍等于没搜。新建前至少搜：中文名、英文名、开发商名（S-GAME / FromSoftware / Nintendo 等）。库里条目往往只留了其中一种写法。
 
 #### 示例
 ```javascript
