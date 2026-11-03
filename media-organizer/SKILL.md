@@ -182,7 +182,16 @@ ssh -o BatchMode=yes sony-memini-fnos "rm -rf \"/vol1/1000/Backup/Film and TV (a
 - **归档目标缺集**：TrueNAS 上某季少几集时，先分清「归档时漏拷」还是「源本身就缺」，不要默认归档出错。两侧各列一次同一集（`/vol2/1000/Downloads/<NAME>` 对 `/vol02/1000-0-8eb8a616/Film and TV/<NAME>`）：源有目标无 → `cp -p` 补拷后重跑校验；源也没有 → 是资源本身不完整，换源或交给用户决定，不要反复重拷同一份源。
 - **磁盘不足**：先报告空间，让用户决定清理哪些副本；不静默删除，不清理做种源。
 - **TrueNAS SSH 不通**：文件操作从 SandY 飞牛走现有 CIFS 挂载，不尝试开启 SSH。
-- **跨站 SSH 超时**：先报告，再重试一次；不循环重连，不改现有网络配置。
+- **跨站 SSH 超时 / 连不上**：先报告，再重试一次。仍不通时先怀疑本机 Tailscale 隧道掉了，而不是 NAS 停机——重启本机 Tailscale 再试一次，多数情况下能恢复（用户经验）：
+
+  ```bash
+  # 不需要密码：重启 Tailscale.app
+  osascript -e 'quit app "Tailscale"'; sleep 3; open -a Tailscale
+  sleep 10
+  tailscale status | head -5     # 正常会列出 sandy-nas-fnos；显示 "Tailscale is stopped." 说明没起来
+  ```
+
+  也可用 CLI（要输密码）：`sudo tailscale down && sudo tailscale up`。重启会短暂断开本机全部 Tailscale 连接；如果你正通过 Tailscale 远程操作这台 Mac，先确认不会中断会话。重启并重试一次后仍不通，就停下来报告，不循环重连、不改现有网络配置。
 
 ## 完成标准
 
